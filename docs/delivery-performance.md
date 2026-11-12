@@ -155,6 +155,66 @@ P13 hit twice. Restoring the missing predicate is what the test was proven
 against: with the date filter made non-sargable the values stay correct and the
 plan still names `org_day`, and the assertion fails at 12,775 of 18,250.
 
+### Advertiser export resource budgets
+
+Synchronous advertiser CSVs accept at most 5,000 campaign/day data rows,
+1,024 UTF-8 bytes per campaign name, and 8 MiB of serialized CSV, within the
+existing 31-day export window. `Report_Export_Limits` is the shared policy.
+These are per-download limits, not limits on stored campaign names or history.
+
+`Rollup_Report_Repository` groups the tenant/date range before joining names.
+The aggregate explicitly selects `org_day` / `org_bucket`: repeated runs showed
+the optimizer sometimes preferred a campaign-first plan that did not guarantee
+the same tenant/date range bound. The derived aggregate retains at most 5,001
+groups so an over-budget result is
+detected rather than silently truncated. SQL masks a name over the byte limit
+instead of transferring it into the PHP result set. The accepted result keeps
+its full names and metrics. `Report_Actions` generates CSV rows without a second
+materialized row array, and `Csv_Writer::bounded_document()` counts the actual
+UTF-8 bytes after neutralization and quoting, including BOM, header, and CRLF.
+The complete document is accepted before attachment headers are sent.
+
+Measured 2026-11-11 on native PHP 8.5.6 / MySQL 8.0.46, one export at a time.
+The fixture has one counter per campaign/day and independently varies name
+width and catalogue size. Baseline is the export implementation at `02b22a3`.
+Setup and fixture allocations are excluded from the peak-memory delta.
+
+| Fixture | Before: added peak MiB | After: added peak MiB | After result |
+|---|---:|---:|---|
+| 1,000 campaigns × 31 days, 64-byte names, UTC | 43.81 | 3.77 | whole export refused |
+| 1,000 campaigns × 31 days, 1,024-byte names, UTC | 136.17 | 14.15 | whole export refused |
+| 160 campaigns × 31 days, 1,024-byte names, UTC | 21.94 | 20.83 | 4,960 rows; 5,227,913 CSV bytes |
+| Same accepted fixture, Asia/Kolkata days | 21.94 | 20.80 | 4,960 rows; 5,227,922 CSV bytes |
+
+The wide oversized read dropped from 522 ms to 98 ms in these samples; the
+accepted UTC read took 38 ms plus 19 ms serialization. These are single-run
+local measurements, not production latency percentiles or a concurrency claim.
+CI's pinned PHP/MySQL versions remain authoritative for compatibility.
+
+`ReportExportScaleTest` keeps the measured cases under 32 MiB of added PHP peak
+memory and covers the exact row boundary, UTF-8 name bytes, escaped-quote byte
+expansion, another tenant's oversized catalogue, and recovery after a refusal
+or failed database query. `ReportReadScaleTest` EXPLAINs the actual UTC and local
+export queries against a year of multi-tenant history; it requires a range scan
+on `org_day` / `org_bucket` and limits estimated examined rows. The browser test
+checks the actual refusal status, absence of attachment headers, and a complete
+successful retry after shortening a name.
+
+To print measurements, set `AGGR_REPORT_EXPORT_BENCHMARK=1` when running
+`ReportExportScaleTest` through the existing WordPress integration runner.
+For a complete native integration run with those measurements:
+
+```sh
+AGGR_REPORT_EXPORT_BENCHMARK=1 pnpm test:php:native:integration
+```
+
+These limits bound the returned PHP data and serialized document. SQL still
+aggregates the indexed tenant/date range; work depends on that range's counter
+cardinality. They do not impose a server query deadline or rate-limit repeated
+authorized downloads. Production query timeouts, worker capacity, and abuse
+controls still need deployment-specific validation. Publisher fill-outcome
+exports use their own read path and are outside this advertiser capacity result.
+
 ### A campaign's reads are the organization's, narrowed
 
 A campaign page reads the same two ranged totals and series with

@@ -322,9 +322,9 @@ final class Reporting_Read {
 	 * @param int           $org_id Owning organization.
 	 * @param Report_Period $period Bounded UTC range.
 	 * @param int           $campaign_id One of its campaigns, or 0 for all of them.
-	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>|\WP_Error
 	 */
-	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
+	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array|\WP_Error {
 		if ( ! $this->surfaces() ) {
 			return array();
 		}

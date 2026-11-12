@@ -427,11 +427,15 @@ problem, not a report-generation one.
   reason labels, which are site-controlled rather than advertiser-controlled —
   lower risk, same treatment, because the writer is not the place to start making
   exceptions.
-- **Resource exhaustion.** Domain date bounds constrain indexed aggregate reads,
-  and exports use a tighter date window. They still assemble all matching
-  campaign/day rows in memory. Date bounds do not cap row count or document
-  bytes; [open work](open-work.md#bound-reporting-export-cardinality) records the
-  remaining large-catalogue limit and required capacity evidence.
+- **Resource exhaustion.** Advertiser exports keep the 31-day window and also
+  enforce 5,000 data rows, 1,024 UTF-8 bytes per campaign name, and 8 MiB of
+  serialized CSV including header and BOM. SQL returns at most 5,001 groups and
+  masks oversized names before returning them to PHP. Serialization builds the
+  complete bounded document before sending any bytes. A limit violation refuses
+  the whole download with HTTP 422 and guidance to narrow the range, export one
+  campaign, or shorten its name. Database failures return 503 rather than an
+  empty CSV. [Measurements](delivery-performance.md#advertiser-export-resource-budgets)
+  and `ReportExportScaleTest` cover cardinality, width, bytes, scope, and recovery.
 - **No new identifier.** Reports aggregate; nothing per-visitor is read, stored
   or rendered. `ip_hash` is never selected by a report query.
 - **Never logged:** report parameters are safe, report *results* for another

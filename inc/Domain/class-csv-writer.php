@@ -81,6 +81,35 @@ final class Csv_Writer {
 	}
 
 	/**
+	 * Build before sending: null means the complete document exceeds its budget.
+	 * Limits include BOM, header, quoting, and CRLF bytes; the header is not a data row.
+	 *
+	 * @param array<int, string>                          $header    Column labels.
+	 * @param iterable<array<int, string|int|float|null>> $rows      Data rows.
+	 * @param int                                         $max_rows  Data-row limit.
+	 * @param int                                         $max_bytes Serialized byte limit.
+	 */
+	public static function bounded_document( array $header, iterable $rows, int $max_rows, int $max_bytes ): ?string {
+		$out = self::BOM . self::row( $header );
+		if ( $max_rows < 0 || strlen( $out ) > $max_bytes ) {
+			return null;
+		}
+		$count = 0;
+		foreach ( $rows as $fields ) {
+			if ( ++$count > $max_rows ) {
+				return null;
+			}
+			$row = self::row( $fields );
+			if ( strlen( $row ) > $max_bytes - strlen( $out ) ) {
+				return null;
+			}
+			$out .= $row;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Neutralizes, then quotes, one field.
 	 *
 	 * @param string|int|float|null $field Raw value.

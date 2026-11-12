@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Portal;
 use Aggressive\Ads\Core\Csv_Download;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
+use Aggressive\Ads\Domain\Report_Export_Limits;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Domain\Report_Zone;
@@ -36,9 +37,8 @@ final class Report_Actions implements Service {
 	/**
 	 * Longest window the export will assemble.
 	 *
-	 * Tighter than the screen's date window because this handler assembles the
-	 * document in memory. This limits days, not campaign/day row cardinality;
-	 * the remaining resource bound is tracked in docs/open-work.md.
+	 * Tighter than the screen's date window. Report_Export_Limits also bounds
+	 * returned row count, campaign-name bytes, and the serialized document.
 	 */
 	public const MAX_DAYS = 31;
 
@@ -118,7 +118,7 @@ final class Report_Actions implements Service {
 			$period = $this->requested_period();
 			$rows   = $this->reporting->daily_rows_for_org( $this->campaigns->org_id( $campaign_id ), $period, $campaign_id );
 
-			Csv_Download::send( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->campaign_filename( $campaign_id, $period->days ) );
+			$this->download( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->campaign_filename( $campaign_id, $period->days ) );
 		}
 
 		$org_id = $this->current_org_id();
@@ -134,7 +134,23 @@ final class Report_Actions implements Service {
 		$period = $this->requested_period();
 		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
-		Csv_Download::send( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->filename( $org_id, $period->days ) );
+		$this->download( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->filename( $org_id, $period->days ) );
+	}
+
+	/**
+	 * Refusals happen before any attachment headers or CSV bytes are sent.
+	 *
+	 * @param string|\WP_Error $document Complete document, or a refusal.
+	 * @param string           $filename Sanitized download name.
+	 */
+	private function download( string|\WP_Error $document, string $filename ): void {
+		if ( is_wp_error( $document ) ) {
+			$data = $document->get_error_data();
+			nocache_headers();
+			wp_die( esc_html( $document->get_error_message() ), '', array( 'response' => is_array( $data ) ? (int) $data['status'] : 503 ) );
+		}
+
+		Csv_Download::send( $document, $filename );
 	}
 
 	/**
@@ -209,11 +225,22 @@ final class Report_Actions implements Service {
 	 * its own process to reach a private method is a test nobody maintains.
 	 * This is a pure function of its argument; exposing it grants nothing.
 	 *
-	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}> $rows      Export rows.
-	 * @param string                                                                                                              $timezone  Zone the dates are in.
-	 * @param string                                                                                                              $history_note Historical coverage limitation, or empty.
+	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}>|\WP_Error $rows      Export rows, or a failed read.
+	 * @param string                                                                                                                        $timezone  Zone the dates are in.
+	 * @param string                                                                                                                        $history_note Historical coverage limitation, or empty.
 	 */
-	public function document( array $rows, string $timezone = Report_Zone::UTC, string $history_note = '' ): string {
+	public function document( array|\WP_Error $rows, string $timezone = Report_Zone::UTC, string $history_note = '' ): string|\WP_Error {
+		if ( is_wp_error( $rows ) ) {
+			return $rows;
+		}
+		if ( count( $rows ) > Report_Export_Limits::MAX_ROWS ) {
+			return new \WP_Error( 'aggr_report_export_too_large', __( 'This report is too large to download. Choose a shorter date range or export a single campaign.', 'aggressive-ads' ), array( 'status' => 422 ) );
+		}
+		foreach ( $rows as $row ) {
+			if ( strlen( $row['campaign'] ) > Report_Export_Limits::MAX_NAME_BYTES ) {
+				return new \WP_Error( 'aggr_report_export_name_too_large', __( 'A campaign name is too long to export. Shorten the name and try again.', 'aggressive-ads' ), array( 'status' => 422 ) );
+			}
+		}
 		$header = array(
 			Report_Zone::UTC === $timezone
 				? __( 'Date (UTC)', 'aggressive-ads' )
@@ -234,24 +261,24 @@ final class Report_Actions implements Service {
 			$header[0] .= ' — ' . $history_note;
 		}
 
-		$body = array();
+		$body = ( static function () use ( $rows ): \Generator {
+			foreach ( $rows as $row ) {
+				$ctr         = Reporting_Rules::ctr( $row['impressions'], $row['clicks'] );
+				$conversions = $row['conversions'] ?? null;
+				yield array(
+					$row['day'],
+					$row['campaign'],
+					$row['campaign_id'],
+					$row['impressions'],
+					$row['clicks'],
+					null === $ctr ? '' : round( $ctr * 100, 2 ),
+					null === $conversions ? '' : $conversions,
+				);
+			}
+		} )();
+		$csv  = Csv_Writer::bounded_document( $header, $body, Report_Export_Limits::MAX_ROWS, Report_Export_Limits::MAX_CSV_BYTES );
 
-		foreach ( $rows as $row ) {
-			$ctr         = Reporting_Rules::ctr( $row['impressions'], $row['clicks'] );
-			$conversions = $row['conversions'] ?? null;
-
-			$body[] = array(
-				$row['day'],
-				$row['campaign'],
-				$row['campaign_id'],
-				$row['impressions'],
-				$row['clicks'],
-				null === $ctr ? '' : round( $ctr * 100, 2 ),
-				null === $conversions ? '' : $conversions,
-			);
-		}
-
-		return Csv_Writer::document( $header, $body );
+		return $csv ?? new \WP_Error( 'aggr_report_export_too_large', __( 'This report is too large to download. Choose a shorter date range or export a single campaign.', 'aggressive-ads' ), array( 'status' => 422 ) );
 	}
 
 	/**

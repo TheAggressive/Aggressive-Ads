@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-11T06:39:25+00:00\n"
+"POT-Creation-Date: 2026-11-12T00:01:24+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -169,7 +169,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:260
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:313
-#: inc/Portal/class-report-actions.php:230
+#: inc/Portal/class-report-actions.php:257
 #: templates/portal/partials/campaign-table.php:62
 #: templates/portal/partials/campaign-variant-comparison.php:50
 msgid "Conversions"
@@ -1473,7 +1473,7 @@ msgid "Reporting is not available on this site."
 msgstr ""
 
 #: inc/Admin/class-report-export.php:149
-#: inc/Portal/class-report-actions.php:219
+#: inc/Portal/class-report-actions.php:246
 msgid "Date (UTC)"
 msgstr ""
 
@@ -1876,7 +1876,7 @@ msgid "Campaign review queue table"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:294 inc/Core/class-post-types.php:201
-#: inc/Portal/class-report-actions.php:225
+#: inc/Portal/class-report-actions.php:252
 #: templates/portal/partials/campaign-status.php:218
 #: templates/portal/partials/campaign-table.php:51
 msgid "Campaign"
@@ -4873,7 +4873,7 @@ msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:291
-#: inc/Portal/class-report-actions.php:227
+#: inc/Portal/class-report-actions.php:254
 #: templates/portal/partials/campaign-table.php:58
 #: templates/portal/partials/campaign-variant-comparison.php:46
 msgid "Impressions"
@@ -4881,7 +4881,7 @@ msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:296
-#: inc/Portal/class-report-actions.php:228
+#: inc/Portal/class-report-actions.php:255
 #: templates/portal/partials/campaign-table.php:60
 #: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
@@ -5051,17 +5051,34 @@ msgstr ""
 msgid "There is no organization to report on."
 msgstr ""
 
+#: inc/Portal/class-report-actions.php:237
+#: inc/Portal/class-report-actions.php:281
+#: inc/Repository/class-rollup-report-repository.php:400
+msgid ""
+"This report is too large to download. Choose a shorter date range or export "
+"a single campaign."
+msgstr ""
+"Este informe es demasiado grande para descargarlo. Elige un intervalo de "
+"fechas más corto o exporta una sola campaña."
+
+#: inc/Portal/class-report-actions.php:241
+#: inc/Repository/class-rollup-report-repository.php:404
+msgid "A campaign name is too long to export. Shorten the name and try again."
+msgstr ""
+"El nombre de una campaña es demasiado largo para exportarlo. Acórtalo e "
+"inténtalo de nuevo."
+
 #. translators: %s: timezone identifier, e.g. America/Los_Angeles.
-#: inc/Portal/class-report-actions.php:222
+#: inc/Portal/class-report-actions.php:249
 #, php-format
 msgid "Date (%s)"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:226
+#: inc/Portal/class-report-actions.php:253
 msgid "Campaign ID"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:229
+#: inc/Portal/class-report-actions.php:256
 msgid "CTR %"
 msgstr ""
 
@@ -5141,6 +5158,10 @@ msgstr ""
 #: inc/Repository/class-org-repository.php:299
 msgid "The organization could not be renamed."
 msgstr ""
+
+#: inc/Repository/class-rollup-report-repository.php:397
+msgid "The report could not be loaded. Please try again."
+msgstr "No se ha podido cargar el informe. Inténtalo de nuevo."
 
 #: inc/Repository/class-user-repository.php:277
 #: inc/Workflow/class-advertiser-registration.php:154

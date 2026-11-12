@@ -127,6 +127,64 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 		);
 	}
 
+	/** Export aggregation remains indexed before its limited result is joined to names. */
+	public function test_exports_use_the_actual_tenant_date_range_plan(): void {
+		global $wpdb;
+		$seeded = $this->seed();
+		$daily  = ( new Rollup_Repository() )->table_name();
+		for ( $id = 1; $id <= self::CAMPAIGNS; ++$id ) {
+			$this->assertSame(
+				1,
+				$wpdb->insert(
+					$wpdb->posts,
+					array(
+						'post_title'            => 'Campaign ' . $id,
+						'post_type'             => 'aggr_campaign',
+						'post_status'           => 'publish',
+						'post_content'          => '',
+						'post_excerpt'          => '',
+						'to_ping'               => '',
+						'pinged'                => '',
+						'post_content_filtered' => '',
+					)
+				)
+			);
+			$campaign_id = (int) $wpdb->insert_id;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Attach this fixture's counters to newly allocated post ids without colliding with other tests.
+			$this->assertNotFalse(
+				$wpdb->update(
+					$daily,
+					array( 'campaign_id' => $campaign_id ),
+					array(
+						'org_id'      => self::ORG_ID,
+						'campaign_id' => 1000 + $id,
+					)
+				)
+			);
+		}
+		$buckets = ( new \Aggressive\Ads\Repository\Report_Bucket_Repository() )->table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Copy only the disposable projection fixture, using repository-owned names.
+		$this->assertNotFalse( $wpdb->query( "INSERT INTO {$buckets} (bucket_utc,placement_id,campaign_id,line_item_id,org_id,impressions,clicks) SELECT CONCAT(day_utc,' 12:00:00'),placement_id,campaign_id,line_item_id,org_id,impressions,clicks FROM {$daily}" ) );
+		foreach ( array(
+			'UTC'          => 'org_day',
+			'Asia/Kolkata' => 'org_bucket',
+		) as $zone => $index ) {
+			$period = Report_Period::ending( 30, gmdate( 'Y-m-d' ), $zone );
+			$rows   = $this->reports->daily_rows_for_org( self::ORG_ID, $period );
+			$query  = $wpdb->last_query;
+			$this->assertIsArray( $rows );
+			$this->assertCount( self::CAMPAIGNS * 30, $rows );
+			$this->assertSame( 30 * self::CAMPAIGNS * self::PLACEMENTS * 40, array_sum( array_column( $rows, 'impressions' ) ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- EXPLAIN exactly what production executed.
+			$plan      = $wpdb->get_results( 'EXPLAIN ' . $query, ARRAY_A );
+			$aggregate = array_values( array_filter( $plan, static fn ( array $step ): bool => 'r' === $step['table'] ) );
+			$this->assertCount( 1, $aggregate );
+			$this->assertSame( $index, $aggregate[0]['key'] );
+			$this->assertSame( 'range', $aggregate[0]['type'] );
+			$this->assertLessThan( $seeded['mine'] / 2, (int) $aggregate[0]['rows'] );
+		}
+	}
+
 	/** Local reads retain org/range index bounds with multiple buckets per day. */
 	public function test_local_reads_use_the_bucket_range_index(): void {
 		global $wpdb;

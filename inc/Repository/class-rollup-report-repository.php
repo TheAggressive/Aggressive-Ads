@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Export_Limits;
 use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Install\Schema;
 
@@ -344,9 +345,9 @@ final class Rollup_Report_Repository {
 	 * @param int           $org_id      Owning organization.
 	 * @param Report_Period $period      Bounded UTC range.
 	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
-	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>|\WP_Error
 	 */
-	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
+	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array|\WP_Error {
 		if ( $org_id <= 0 ) {
 			return array();
 		}
@@ -357,38 +358,51 @@ final class Rollup_Report_Repository {
 		$bucket  = Report_Zone::UTC === $period->timezone ? 'r.day_utc' : 'r.bucket_utc';
 		$day_sql = $this->day_sql( $period );
 		$posts   = $wpdb->posts;
+		$index   = Report_Zone::UTC === $period->timezone ? 'org_day' : 'org_bucket';
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts; bounds and org id are prepared.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts; the tenant/date index is allowlisted and all values are prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT {$day_sql} AS day,
-					r.campaign_id AS campaign_id,
-					p.post_title AS campaign,
-					COALESCE(SUM(r.impressions), 0) AS impressions,
-					COALESCE(SUM(r.clicks), 0) AS clicks,
-					SUM(r.conversions) AS conversions
-				FROM {$table} r
-				INNER JOIN {$posts} p
-					ON p.ID = r.campaign_id
-				WHERE r.org_id = %d
-					AND r.campaign_id > 0
-					AND ( %d = 0 OR r.campaign_id = %d )
-					AND {$bucket} >= %s
-					AND {$bucket} < %s
-				GROUP BY day, r.campaign_id, p.post_title
-				ORDER BY day ASC, p.post_title ASC",
+				"SELECT q.*, CASE WHEN OCTET_LENGTH(p.post_title) <= %d THEN p.post_title ELSE NULL END AS campaign
+				FROM (
+					SELECT {$day_sql} AS day, r.campaign_id,
+						COALESCE(SUM(r.impressions), 0) AS impressions,
+						COALESCE(SUM(r.clicks), 0) AS clicks,
+						SUM(r.conversions) AS conversions
+					FROM {$table} r FORCE INDEX ({$index})
+					INNER JOIN {$posts} existing ON existing.ID = r.campaign_id
+					WHERE r.org_id = %d
+						AND r.campaign_id > 0
+						AND ( %d = 0 OR r.campaign_id = %d )
+						AND {$bucket} >= %s AND {$bucket} < %s
+					GROUP BY day, r.campaign_id
+					ORDER BY day, r.campaign_id
+					LIMIT %d
+				) q
+				INNER JOIN {$posts} p ON p.ID = q.campaign_id
+				ORDER BY q.day ASC, campaign ASC, q.campaign_id ASC",
+				Report_Export_Limits::MAX_NAME_BYTES,
 				$org_id,
 				$campaign_id,
 				$campaign_id,
 				$period->bucket_start(),
-				$period->bucket_end()
+				$period->bucket_end(),
+				Report_Export_Limits::MAX_ROWS + 1
 			),
 			ARRAY_A
 		);
 		// phpcs:enable
 
-		if ( ! is_array( $rows ) ) {
-			return array();
+		if ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {
+			return new \WP_Error( 'aggr_report_export_unavailable', __( 'The report could not be loaded. Please try again.', 'aggressive-ads' ), array( 'status' => 503 ) );
+		}
+		if ( count( $rows ) > Report_Export_Limits::MAX_ROWS ) {
+			return new \WP_Error( 'aggr_report_export_too_large', __( 'This report is too large to download. Choose a shorter date range or export a single campaign.', 'aggressive-ads' ), array( 'status' => 422 ) );
+		}
+		foreach ( $rows as $row ) {
+			if ( null === $row['campaign'] ) {
+				return new \WP_Error( 'aggr_report_export_name_too_large', __( 'A campaign name is too long to export. Shorten the name and try again.', 'aggressive-ads' ), array( 'status' => 422 ) );
+			}
 		}
 
 		return array_map(
