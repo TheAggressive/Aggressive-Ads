@@ -60,4 +60,37 @@ final class ReportSubscriptionSchemaTest extends WP_UnitTestCase {
 			add_filter( 'query', array( $this, '_drop_temporary_tables' ) );
 		}
 	}
+	/** A refused CREATE must leave version 32 pending and recover on the next run. */
+	public function test_failed_creation_does_not_commit_migration_progress(): void {
+		global $wpdb;
+		$repo     = new Report_Subscription_Repository();
+		$original = get_option( \Aggressive\Ads\Install\Installer::OPTION_DB_VERSION );
+		$fail     = static fn ( string $sql ): string => str_contains( $sql, 'CREATE TABLE ' . $repo->table_name() ) ? 'CREATE TABLE aggr_report_create_failure_test (' : $sql;
+		$errors   = $wpdb->suppress_errors( true );
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+		try {
+			$repo->drop_table();
+			$this->assertFalse( $repo->table_exists() );
+			update_option( \Aggressive\Ads\Install\Installer::OPTION_DB_VERSION, 32, true );
+			$upgrader = Plugin::instance()->container()->get( \Aggressive\Ads\Install\Upgrader::class );
+			add_filter( 'query', $fail );
+			try {
+				$upgrader->maybe_upgrade();
+			} finally {
+				remove_filter( 'query', $fail );
+			}
+			$this->assertSame( 32, \Aggressive\Ads\Install\Installer::stored_db_version() );
+			$this->assertFalse( $repo->table_exists() );
+			$upgrader->maybe_upgrade();
+			$this->assertTrue( $repo->table_exists() );
+			$this->assertSame( 33, \Aggressive\Ads\Install\Installer::stored_db_version() );
+		} finally {
+			$repo->install_table();
+			update_option( \Aggressive\Ads\Install\Installer::OPTION_DB_VERSION, $original, true );
+			$wpdb->suppress_errors( $errors );
+			add_filter( 'query', array( $this, '_create_temporary_tables' ) );
+			add_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+		}
+	}
 }

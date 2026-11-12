@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-12T07:12:10+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -4978,7 +4978,7 @@ msgid "Report preferences are busy. Please try again."
 msgstr ""
 
 #: inc/Portal/class-report-preference-actions.php:136
-#: inc/Repository/class-report-subscription-repository.php:64
+#: inc/Repository/class-report-subscription-repository.php:77
 #: templates/portal/partials/report-preferences.php:26
 msgid "Report preferences could not be loaded. Please try again."
 msgstr ""

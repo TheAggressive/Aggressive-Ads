@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-12T07:01:01+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4152,12 +4152,15 @@ msgstr "Inicia sesión para abrir tu informe y descargar su CSV:"
 msgid ""
 "Source: native delivery. Generated %s UTC. Portal figures may change as "
 "reconciliation finishes."
-msgstr "Fuente: entrega nativa de anuncios. Generado el %s UTC. Las cifras del portal pueden cambiar mientras se completa la conciliación."
+msgstr ""
+"Fuente: entrega nativa de anuncios. Generado el %s UTC. Las cifras del "
+"portal pueden cambiar mientras se completa la conciliación."
 
 #. translators: %s: generation timestamp in UTC.
 #: inc/Notification/class-scheduled-report-mailer.php:88
 msgid "Change or stop report emails in Account settings:"
-msgstr "Cambia o desactiva los correos de informes en los ajustes de tu cuenta:"
+msgstr ""
+"Cambia o desactiva los correos de informes en los ajustes de tu cuenta:"
 
 #: inc/Portal/class-account-actions.php:103
 #: inc/Portal/class-account-actions.php:129
@@ -5134,11 +5137,15 @@ msgstr ""
 #: inc/Portal/class-report-preference-actions.php:134
 #: inc/Workflow/class-scheduled-reports.php:125
 msgid "Report emails are paused while reporting is turned off."
-msgstr "Los correos de informes están en pausa mientras los informes están desactivados."
+msgstr ""
+"Los correos de informes están en pausa mientras los informes están "
+"desactivados."
 
 #: inc/Portal/class-report-preference-actions.php:88
 msgid "Report scheduling is unavailable. Please contact site staff."
-msgstr "La programación de informes no está disponible. Contacta con el equipo del sitio."
+msgstr ""
+"La programación de informes no está disponible. Contacta con el equipo del "
+"sitio."
 
 #: inc/Portal/class-report-preference-actions.php:111
 msgid "Preparing the report."
@@ -5150,7 +5157,8 @@ msgstr "Enviando al servicio de correo."
 
 #: inc/Portal/class-report-preference-actions.php:113
 msgid "Queued for delivery. Inbox delivery is not confirmed."
-msgstr "En cola de envío. La recepción en la bandeja de entrada no está confirmada."
+msgstr ""
+"En cola de envío. La recepción en la bandeja de entrada no está confirmada."
 
 #: inc/Portal/class-report-preference-actions.php:114
 msgid "Waiting to retry."
@@ -5158,17 +5166,21 @@ msgstr "Esperando para reintentar."
 
 #: inc/Portal/class-report-preference-actions.php:115
 msgid "The last report could not be queued. The next period remains scheduled."
-msgstr "No se ha podido poner el último informe en cola de envío. El siguiente período sigue programado."
+msgstr ""
+"No se ha podido poner el último informe en cola de envío. El siguiente "
+"período sigue programado."
 
 #: inc/Portal/class-report-preference-actions.php:116
 msgid "Report emails stopped because account access changed."
-msgstr "Se han detenido los correos de informes porque cambió el acceso a la cuenta."
+msgstr ""
+"Se han detenido los correos de informes porque cambió el acceso a la cuenta."
 
 #: inc/Portal/class-report-preference-actions.php:117
 msgid ""
 "The last delivery could not be confirmed and will not be resent "
 "automatically."
-msgstr "No se ha podido confirmar el último envío y no se reenviará automáticamente."
+msgstr ""
+"No se ha podido confirmar el último envío y no se reenviará automáticamente."
 
 #: inc/Portal/class-report-preference-actions.php:129
 msgid "Your report email preferences were saved."
@@ -5191,16 +5203,18 @@ msgid "Report preferences are busy. Please try again."
 msgstr "Las preferencias de informes están ocupadas. Inténtalo de nuevo."
 
 #: inc/Portal/class-report-preference-actions.php:136
-#: inc/Repository/class-report-subscription-repository.php:64
+#: inc/Repository/class-report-subscription-repository.php:77
 #: templates/portal/partials/report-preferences.php:26
 msgid "Report preferences could not be loaded. Please try again."
-msgstr "No se han podido cargar las preferencias de informes. Inténtalo de nuevo."
+msgstr ""
+"No se han podido cargar las preferencias de informes. Inténtalo de nuevo."
 
 #: inc/Portal/class-report-preference-actions.php:137
 #: inc/Workflow/class-scheduled-reports.php:148
 #: inc/Workflow/class-scheduled-reports.php:152
 msgid "Report preferences could not be saved. Please try again."
-msgstr "No se han podido guardar las preferencias de informes. Inténtalo de nuevo."
+msgstr ""
+"No se han podido guardar las preferencias de informes. Inténtalo de nuevo."
 
 #: inc/Portal/class-signup-actions.php:126
 msgid ""
@@ -8235,7 +8249,11 @@ msgid ""
 "Weekly reports cover Monday–Sunday and are scheduled on Monday after 9:00 "
 "a.m. Monthly reports cover the previous calendar month and are scheduled on "
 "the first after 9:00 a.m. Times follow %s; actual delivery can be later."
-msgstr "Los informes semanales abarcan de lunes a domingo y se programan el lunes después de las 9:00. Los mensuales abarcan el mes natural anterior y se programan el día 1 después de las 9:00. Se aplica la zona horaria %s; el envío puede producirse más tarde."
+msgstr ""
+"Los informes semanales abarcan de lunes a domingo y se programan el lunes "
+"después de las 9:00. Los mensuales abarcan el mes natural anterior y se "
+"programan el día 1 después de las 9:00. Se aplica la zona horaria %s; el "
+"envío puede producirse más tarde."
 
 #: templates/portal/partials/report-preferences.php:45
 msgid "Save report preferences"
@@ -8257,7 +8275,9 @@ msgstr "Último informe en cola de envío: %s"
 msgid ""
 "You can turn these emails off here at any time. Report and CSV links require "
 "signing in."
-msgstr "Puedes desactivar estos correos aquí en cualquier momento. Los enlaces de informes y CSV requieren iniciar sesión."
+msgstr ""
+"Puedes desactivar estos correos aquí en cualquier momento. Los enlaces de "
+"informes y CSV requieren iniciar sesión."
 
 #. translators: 1: first day of the range. 2: last day of the range.
 #: templates/portal/partials/sparkline.php:31

@@ -28,11 +28,24 @@ final class Report_Subscription_Repository {
 		return $wpdb->prefix . Schema::REPORT_SUBSCRIPTIONS_TABLE;
 	}
 
-	/** Additive schema install and repair. */
+	/**
+	 * Additive schema install and repair.
+	 *
+	 * @throws \RuntimeException When installation cannot establish the required schema.
+	 */
 	public function install_table(): void {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( Schema_Report_Subscriptions::ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		if ( '' !== $wpdb->last_error ) {
+			throw new \RuntimeException( 'Could not install the report subscription schema.' );
+		}
+		// Do not let the upgrader stamp completion after a refused or partial CREATE.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded introspection verifies required columns before migration progress advances.
+		$columns = $wpdb->get_col( $wpdb->prepare( 'DESCRIBE %i', $this->table_name() ) );
+		if ( array_diff( Schema_Report_Subscriptions::columns(), $columns ) ) {
+			throw new \RuntimeException( 'Could not install the report subscription schema.' );
+		}
 	}
 
 	/** Schema existence check. */

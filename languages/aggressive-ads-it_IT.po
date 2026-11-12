@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-12T07:01:01+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4152,12 +4152,15 @@ msgstr "Accedi per aprire il rapporto e scaricare il relativo CSV:"
 msgid ""
 "Source: native delivery. Generated %s UTC. Portal figures may change as "
 "reconciliation finishes."
-msgstr "Fonte: erogazione nativa degli annunci. Generato il %s UTC. Le cifre del portale possono cambiare fino al completamento della riconciliazione."
+msgstr ""
+"Fonte: erogazione nativa degli annunci. Generato il %s UTC. Le cifre del "
+"portale possono cambiare fino al completamento della riconciliazione."
 
 #. translators: %s: generation timestamp in UTC.
 #: inc/Notification/class-scheduled-report-mailer.php:88
 msgid "Change or stop report emails in Account settings:"
-msgstr "Modifica o disattiva le email dei rapporti nelle impostazioni dell’account:"
+msgstr ""
+"Modifica o disattiva le email dei rapporti nelle impostazioni dell’account:"
 
 #: inc/Portal/class-account-actions.php:103
 #: inc/Portal/class-account-actions.php:129
@@ -5134,11 +5137,14 @@ msgstr ""
 #: inc/Portal/class-report-preference-actions.php:134
 #: inc/Workflow/class-scheduled-reports.php:125
 msgid "Report emails are paused while reporting is turned off."
-msgstr "Le email dei rapporti sono in pausa mentre la reportistica è disattivata."
+msgstr ""
+"Le email dei rapporti sono in pausa mentre la reportistica è disattivata."
 
 #: inc/Portal/class-report-preference-actions.php:88
 msgid "Report scheduling is unavailable. Please contact site staff."
-msgstr "La programmazione dei rapporti non è disponibile. Contatta il personale del sito."
+msgstr ""
+"La programmazione dei rapporti non è disponibile. Contatta il personale del "
+"sito."
 
 #: inc/Portal/class-report-preference-actions.php:111
 msgid "Preparing the report."
@@ -5150,7 +5156,8 @@ msgstr "Invio al servizio di posta."
 
 #: inc/Portal/class-report-preference-actions.php:113
 msgid "Queued for delivery. Inbox delivery is not confirmed."
-msgstr "In coda per l’invio. La ricezione nella casella di posta non è confermata."
+msgstr ""
+"In coda per l’invio. La ricezione nella casella di posta non è confermata."
 
 #: inc/Portal/class-report-preference-actions.php:114
 msgid "Waiting to retry."
@@ -5158,17 +5165,22 @@ msgstr "In attesa di un nuovo tentativo."
 
 #: inc/Portal/class-report-preference-actions.php:115
 msgid "The last report could not be queued. The next period remains scheduled."
-msgstr "Impossibile mettere in coda l’ultimo rapporto. Il periodo successivo resta programmato."
+msgstr ""
+"Impossibile mettere in coda l’ultimo rapporto. Il periodo successivo resta "
+"programmato."
 
 #: inc/Portal/class-report-preference-actions.php:116
 msgid "Report emails stopped because account access changed."
-msgstr "Le email dei rapporti sono state interrotte perché l’accesso all’account è cambiato."
+msgstr ""
+"Le email dei rapporti sono state interrotte perché l’accesso all’account è "
+"cambiato."
 
 #: inc/Portal/class-report-preference-actions.php:117
 msgid ""
 "The last delivery could not be confirmed and will not be resent "
 "automatically."
-msgstr "L’ultimo invio non è stato confermato e non verrà ripetuto automaticamente."
+msgstr ""
+"L’ultimo invio non è stato confermato e non verrà ripetuto automaticamente."
 
 #: inc/Portal/class-report-preference-actions.php:129
 msgid "Your report email preferences were saved."
@@ -5191,7 +5203,7 @@ msgid "Report preferences are busy. Please try again."
 msgstr "Le preferenze dei rapporti sono occupate. Riprova."
 
 #: inc/Portal/class-report-preference-actions.php:136
-#: inc/Repository/class-report-subscription-repository.php:64
+#: inc/Repository/class-report-subscription-repository.php:77
 #: templates/portal/partials/report-preferences.php:26
 msgid "Report preferences could not be loaded. Please try again."
 msgstr "Impossibile caricare le preferenze dei rapporti. Riprova."
@@ -8235,7 +8247,11 @@ msgid ""
 "Weekly reports cover Monday–Sunday and are scheduled on Monday after 9:00 "
 "a.m. Monthly reports cover the previous calendar month and are scheduled on "
 "the first after 9:00 a.m. Times follow %s; actual delivery can be later."
-msgstr "I rapporti settimanali coprono da lunedì a domenica e sono programmati il lunedì dopo le 9:00. I rapporti mensili coprono il mese solare precedente e sono programmati il primo giorno dopo le 9:00. Si applica il fuso orario %s; l’invio può avvenire più tardi."
+msgstr ""
+"I rapporti settimanali coprono da lunedì a domenica e sono programmati il "
+"lunedì dopo le 9:00. I rapporti mensili coprono il mese solare precedente e "
+"sono programmati il primo giorno dopo le 9:00. Si applica il fuso orario %s; "
+"l’invio può avvenire più tardi."
 
 #: templates/portal/partials/report-preferences.php:45
 msgid "Save report preferences"
@@ -8257,7 +8273,9 @@ msgstr "Ultima messa in coda per l’invio: %s"
 msgid ""
 "You can turn these emails off here at any time. Report and CSV links require "
 "signing in."
-msgstr "Puoi disattivare queste email qui in qualsiasi momento. I link ai rapporti e ai CSV richiedono l’accesso."
+msgstr ""
+"Puoi disattivare queste email qui in qualsiasi momento. I link ai rapporti e "
+"ai CSV richiedono l’accesso."
 
 #. translators: 1: first day of the range. 2: last day of the range.
 #: templates/portal/partials/sparkline.php:31

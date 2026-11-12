@@ -156,7 +156,10 @@ wp cron event run aggr_reconcile_campaigns
 
 ### Scheduled report recovery
 
-Schema 33 adds personal report preferences, all initially Off. Test opt-in and
+Schema 33 adds personal report preferences, all initially Off. A refused table
+creation leaves the migration pending and records `plugin.upgrade_failed`;
+restore database schema permissions and the next upgrade check retries it.
+Test opt-in and
 transport on a disposable account with mail interception first. In Account,
 verify the next run, last queued time, and last result. Queued means transport
 acceptance, not inbox receipt. Missing cron displays an unavailable-scheduling

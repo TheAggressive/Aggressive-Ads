@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-12T07:01:01+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4152,12 +4152,15 @@ msgstr "Connectez-vous pour ouvrir votre rapport et télécharger son CSV :"
 msgid ""
 "Source: native delivery. Generated %s UTC. Portal figures may change as "
 "reconciliation finishes."
-msgstr "Source : diffusion native des annonces. Généré le %s UTC. Les chiffres du portail peuvent changer jusqu’à la fin du rapprochement."
+msgstr ""
+"Source : diffusion native des annonces. Généré le %s UTC. Les chiffres du "
+"portail peuvent changer jusqu’à la fin du rapprochement."
 
 #. translators: %s: generation timestamp in UTC.
 #: inc/Notification/class-scheduled-report-mailer.php:88
 msgid "Change or stop report emails in Account settings:"
-msgstr "Modifiez ou désactivez les e-mails de rapport dans les réglages du compte :"
+msgstr ""
+"Modifiez ou désactivez les e-mails de rapport dans les réglages du compte :"
 
 #: inc/Portal/class-account-actions.php:103
 #: inc/Portal/class-account-actions.php:129
@@ -5134,11 +5137,13 @@ msgstr ""
 #: inc/Portal/class-report-preference-actions.php:134
 #: inc/Workflow/class-scheduled-reports.php:125
 msgid "Report emails are paused while reporting is turned off."
-msgstr "Les e-mails de rapport sont suspendus tant que les rapports sont désactivés."
+msgstr ""
+"Les e-mails de rapport sont suspendus tant que les rapports sont désactivés."
 
 #: inc/Portal/class-report-preference-actions.php:88
 msgid "Report scheduling is unavailable. Please contact site staff."
-msgstr "La programmation des rapports est indisponible. Contactez l’équipe du site."
+msgstr ""
+"La programmation des rapports est indisponible. Contactez l’équipe du site."
 
 #: inc/Portal/class-report-preference-actions.php:111
 msgid "Preparing the report."
@@ -5150,7 +5155,8 @@ msgstr "Transmission au service de messagerie."
 
 #: inc/Portal/class-report-preference-actions.php:113
 msgid "Queued for delivery. Inbox delivery is not confirmed."
-msgstr "En file d’envoi. La réception dans la boîte de réception n’est pas confirmée."
+msgstr ""
+"En file d’envoi. La réception dans la boîte de réception n’est pas confirmée."
 
 #: inc/Portal/class-report-preference-actions.php:114
 msgid "Waiting to retry."
@@ -5158,7 +5164,9 @@ msgstr "En attente d’une nouvelle tentative."
 
 #: inc/Portal/class-report-preference-actions.php:115
 msgid "The last report could not be queued. The next period remains scheduled."
-msgstr "Le dernier rapport n’a pas pu être mis en file d’envoi. La période suivante reste programmée."
+msgstr ""
+"Le dernier rapport n’a pas pu être mis en file d’envoi. La période suivante "
+"reste programmée."
 
 #: inc/Portal/class-report-preference-actions.php:116
 msgid "Report emails stopped because account access changed."
@@ -5168,7 +5176,9 @@ msgstr "Les e-mails de rapport ont été arrêtés car l’accès au compte a ch
 msgid ""
 "The last delivery could not be confirmed and will not be resent "
 "automatically."
-msgstr "Le dernier envoi n’a pas pu être confirmé et ne sera pas renouvelé automatiquement."
+msgstr ""
+"Le dernier envoi n’a pas pu être confirmé et ne sera pas renouvelé "
+"automatiquement."
 
 #: inc/Portal/class-report-preference-actions.php:129
 msgid "Your report email preferences were saved."
@@ -5191,16 +5201,19 @@ msgid "Report preferences are busy. Please try again."
 msgstr "Les préférences de rapport sont occupées. Veuillez réessayer."
 
 #: inc/Portal/class-report-preference-actions.php:136
-#: inc/Repository/class-report-subscription-repository.php:64
+#: inc/Repository/class-report-subscription-repository.php:77
 #: templates/portal/partials/report-preferences.php:26
 msgid "Report preferences could not be loaded. Please try again."
-msgstr "Les préférences de rapport n’ont pas pu être chargées. Veuillez réessayer."
+msgstr ""
+"Les préférences de rapport n’ont pas pu être chargées. Veuillez réessayer."
 
 #: inc/Portal/class-report-preference-actions.php:137
 #: inc/Workflow/class-scheduled-reports.php:148
 #: inc/Workflow/class-scheduled-reports.php:152
 msgid "Report preferences could not be saved. Please try again."
-msgstr "Les préférences de rapport n’ont pas pu être enregistrées. Veuillez réessayer."
+msgstr ""
+"Les préférences de rapport n’ont pas pu être enregistrées. Veuillez "
+"réessayer."
 
 #: inc/Portal/class-signup-actions.php:126
 msgid ""
@@ -8235,7 +8248,11 @@ msgid ""
 "Weekly reports cover Monday–Sunday and are scheduled on Monday after 9:00 "
 "a.m. Monthly reports cover the previous calendar month and are scheduled on "
 "the first after 9:00 a.m. Times follow %s; actual delivery can be later."
-msgstr "Les rapports hebdomadaires couvrent du lundi au dimanche et sont programmés le lundi après 9 h. Les rapports mensuels couvrent le mois civil précédent et sont programmés le premier après 9 h. Le fuseau horaire %s s’applique ; l’envoi peut avoir lieu plus tard."
+msgstr ""
+"Les rapports hebdomadaires couvrent du lundi au dimanche et sont programmés "
+"le lundi après 9 h. Les rapports mensuels couvrent le mois civil précédent "
+"et sont programmés le premier après 9 h. Le fuseau horaire %s s’applique ; "
+"l’envoi peut avoir lieu plus tard."
 
 #: templates/portal/partials/report-preferences.php:45
 msgid "Save report preferences"
@@ -8257,7 +8274,9 @@ msgstr "Dernière mise en file d’envoi : %s"
 msgid ""
 "You can turn these emails off here at any time. Report and CSV links require "
 "signing in."
-msgstr "Vous pouvez désactiver ces e-mails ici à tout moment. Les liens vers les rapports et les CSV nécessitent une connexion."
+msgstr ""
+"Vous pouvez désactiver ces e-mails ici à tout moment. Les liens vers les "
+"rapports et les CSV nécessitent une connexion."
 
 #. translators: 1: first day of the range. 2: last day of the range.
 #: templates/portal/partials/sparkline.php:31
