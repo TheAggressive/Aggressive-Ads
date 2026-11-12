@@ -216,6 +216,42 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		);
 	}
 
+	/** Matching subscription ids and worker lock scopes stay within each site. */
+	public function test_report_schedules_and_locks_are_site_scoped_and_deactivation_preserves_preferences(): void {
+		$this->network_activate();
+		$sites  = array( (int) self::factory()->blog->create(), (int) self::factory()->blog->create() );
+		$repo   = new \Aggressive\Ads\Repository\Report_Subscription_Repository();
+		$worker = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Scheduled_Reports::class );
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $repo, $worker, $index ): void {
+					$this->assertNull( $repo->for_member( 123, 456 ) );
+					$this->assertTrue( $repo->save( 123, 456, 0 === $index ? 'weekly' : 'monthly', 'UTC', 1234567890 ) );
+					$this->assertTrue( $repo->acquire( 'worker' ), 'A different site must not inherit the first worker lock.' );
+					$worker->ensure_scheduled();
+					$this->assertNotFalse( wp_next_scheduled( \Aggressive\Ads\Workflow\Scheduled_Reports::HOOK ) );
+				}
+			);
+		}
+		try {
+			\Aggressive\Ads\Install\Uninstaller::unschedule_reports( true );
+			foreach ( $sites as $index => $site ) {
+				$this->on_site(
+					$site,
+					function () use ( $repo, $index ): void {
+						$this->assertSame( 0 === $index ? 'weekly' : 'monthly', $repo->for_member( 123, 456 )['cadence'] );
+						$this->assertFalse( wp_next_scheduled( \Aggressive\Ads\Workflow\Scheduled_Reports::HOOK ) );
+					}
+				);
+			}
+		} finally {
+			foreach ( $sites as $site ) {
+				$this->on_site( $site, static fn () => $repo->release( 'worker' ) );
+			}
+		}
+	}
+
 	/**
 	 * Network-activates this plugin. The test bootstrap loads it as an
 	 * mu-plugin, which is not the same as active_sitewide_plugins.
@@ -278,6 +314,7 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 					'events'               => ( new Event_Repository() )->table_name(),
 					'rollups'              => ( new Rollup_Repository() )->table_name(),
 					'report_buckets'       => ( new Report_Bucket_Repository() )->table_name(),
+					'report_subscriptions' => ( new \Aggressive\Ads\Repository\Report_Subscription_Repository() )->table_name(),
 					'line_items'           => ( new Line_Item_Repository( new Campaign_Repository() ) )->table_name(),
 					'creative_assets'      => ( new Creative_Asset_Repository() )->table_name(),
 					'creative_assignments' => ( new Creative_Assignment_Repository() )->table_name(),
@@ -310,6 +347,7 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 			'events'               => $expected,
 			'rollups'              => $expected,
 			'report_buckets'       => $expected,
+			'report_subscriptions' => $expected,
 			'line_items'           => $expected,
 			'creative_assets'      => $expected,
 			'creative_assignments' => $expected,

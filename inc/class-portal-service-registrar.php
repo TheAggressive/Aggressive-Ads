@@ -81,6 +81,15 @@ final class Portal_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
+			\Aggressive\Ads\Portal\Report_Preference_Actions::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Report_Preference_Actions => new \Aggressive\Ads\Portal\Report_Preference_Actions(
+				$c->get( \Aggressive\Ads\Workflow\Scheduled_Reports::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\User_Repository::class ),
+				$c->get( Reporting_Read::class )
+			)
+		);
+		$container->register(
 			Acting_Actions::class,
 			static fn ( Service_Container $c ): Acting_Actions => new Acting_Actions(
 				$c->get( Acting_As::class )

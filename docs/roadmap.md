@@ -164,7 +164,10 @@ sequenced platform phases or explicit product issues under #258.
 
 Current product issues include:
 
-- #279 scheduled white-label advertiser reports;
+- #279 scheduled white-label advertiser reports: personal weekly/monthly
+  organization summaries implemented in #365; campaign goal/pacing summaries
+  and the remaining parent acceptance criteria stay open. See
+  [delivery scope](scheduled-advertiser-reports.md);
 - #280 advertiser inventory storefront/booking;
 - #281 campaign templates / reusable sales-product presets;
 - #282 proposal, quote and insertion-order workflow;

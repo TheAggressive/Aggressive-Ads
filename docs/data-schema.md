@@ -664,3 +664,20 @@ check — and one warm, with no per-candidate read.
 **Wired.** Native fill reads this contract through `Workflow\Decision_Engine`
 after the P2 assignment backfill completes. Token validation still re-reads the
 winning creative through `Delivery_Repository::candidate()`.
+
+## Scheduled report preferences — schema 33
+
+`{prefix}aggr_report_subscriptions` contains one row per `(org_id,user_id)`,
+enforced by `org_user`. `due(enabled,due_at,id)` bounds worker candidates to 20;
+`recipient(user_id,id)` supports account deletion. Stored fields are cadence,
+site timezone, enabled flag, due timestamp, delivery state, period dates, attempt
+count, last queued timestamp, allowlisted error code, and preference revision.
+No copied email address, message body, bearer token or report artifact is stored.
+
+Migration 33 is additive and retryable; it does not opt anyone in. Fresh/repair
+installs create the same table. Settings writes increment the revision and reset
+old work. Workers use site-scoped nonblocking database session locks and
+compare-and-set state transitions. A persisted `sending` state after interruption
+is uncertain, never automatically resent for that period. User/organization
+deletion removes their rows; deactivation preserves them; uninstall/site deletion
+drops the current site's table. See [delivery and recovery semantics](scheduled-advertiser-reports.md).

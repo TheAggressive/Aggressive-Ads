@@ -197,6 +197,8 @@ foreach ( array_slice( is_array( $aggr_account_words ) ? $aggr_account_words : a
 	<?php endif; ?>
 </section>
 
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/report-preferences.php'; ?>
+
 <section class="aggr-panel aggr-panel--padded aggr-password" aria-labelledby="aggr-account-password">
 	<span class="aggr-password__icon" aria-hidden="true">
 		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>

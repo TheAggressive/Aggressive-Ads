@@ -173,6 +173,7 @@ final class Plugin {
 		$this->register_services();
 
 		register_activation_hook( AGGR_PLUGIN_FILE, array( $this, 'activate' ) );
+		register_deactivation_hook( AGGR_PLUGIN_FILE, array( \Aggressive\Ads\Install\Uninstaller::class, 'unschedule_reports' ) );
 
 		// Priority 5, ahead of init_services at 10: schema must be current
 		// before any service reads it. Activation is only a hint — it does not
@@ -366,6 +367,7 @@ final class Plugin {
 			Audit_Retention::class,
 			Creative_Retention::class,
 			Rollup_Reconciler::class,
+			\Aggressive\Ads\Workflow\Scheduled_Reports::class,
 			Event_Retention::class,
 			Notification_Service::class,
 			Request_Mailer::class,
@@ -397,6 +399,7 @@ final class Plugin {
 			Account_Actions::class,
 			Email_Change_Actions::class,
 			Report_Actions::class,
+			\Aggressive\Ads\Portal\Report_Preference_Actions::class,
 			Organization_Actions::class,
 			Login_Actions::class,
 			Signup_Actions::class,

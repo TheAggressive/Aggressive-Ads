@@ -54,6 +54,10 @@ final class Repository_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
+			\Aggressive\Ads\Repository\Report_Subscription_Repository::class,
+			static fn (): \Aggressive\Ads\Repository\Report_Subscription_Repository => new \Aggressive\Ads\Repository\Report_Subscription_Repository()
+		);
+		$container->register(
 			Release_Repository::class,
 			static fn ( Service_Container $c ): Release_Repository => new Release_Repository(
 				$c->get( Update_Http_Client::class )

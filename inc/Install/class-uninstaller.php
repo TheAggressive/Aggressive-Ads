@@ -134,6 +134,21 @@ final class Uninstaller {
 	}
 
 	/**
+	 * Stop report polling on deactivation while preserving saved preferences.
+	 *
+	 * @param bool $network_wide Whether WordPress is deactivating the network plugin.
+	 */
+	public static function unschedule_reports( bool $network_wide = false ): void {
+		if ( $network_wide && is_multisite() ) {
+			foreach ( self::site_ids() as $blog_id ) {
+				self::on_site( $blog_id, static fn () => \Aggressive\Ads\Workflow\Scheduled_Reports::unschedule() );
+			}
+			return;
+		}
+		\Aggressive\Ads\Workflow\Scheduled_Reports::unschedule();
+	}
+
+	/**
 	 * Drops plugin tables, roles, cron and options on the current blog.
 	 *
 	 * Does not delete posts. WordPress drops wp_{n}_posts on site deletion;
@@ -147,6 +162,7 @@ final class Uninstaller {
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
 		( new Report_Bucket_Repository() )->drop_table();
+		( new \Aggressive\Ads\Repository\Report_Subscription_Repository() )->drop_table();
 		( new Decision_Rollup_Repository() )->drop_table();
 		( new Forecast_Repository() )->drop_table();
 		( new Reservation_Repository() )->drop_table();
@@ -164,6 +180,7 @@ final class Uninstaller {
 		Audit_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
+		\Aggressive\Ads\Workflow\Scheduled_Reports::unschedule();
 		Forecast_Scheduler::unschedule();
 		Line_Item_Migrator::unschedule();
 		Creative_Assignment_Migrator::unschedule();

@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 32;
+	public const DB_VERSION = 33;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -57,6 +57,9 @@ final class Schema {
 	 * day can be summed without moving the daily pacing "today".
 	 */
 	public const REPORT_BUCKETS_TABLE = 'aggr_report_buckets';
+
+	/** Personal report preferences and current delivery state. */
+	public const REPORT_SUBSCRIPTIONS_TABLE = 'aggr_report_subscriptions';
 
 	/** Per-placement, per-day decision outcomes. See docs/platform-p13-event-analytics-schema.md. */
 	public const DECISION_ROLLUPS_TABLE = 'aggr_decision_rollups';

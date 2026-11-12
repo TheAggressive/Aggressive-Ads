@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-12T00:01:24+00:00\n"
+"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -167,8 +167,8 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:154
 #: inc/Admin/class-conversions-screen.php:198
 #: inc/Admin/class-conversions-screen.php:260
-#: inc/Portal/class-delivery-view-data.php:275
-#: inc/Portal/class-delivery-view-data.php:313
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:327
 #: inc/Portal/class-report-actions.php:257
 #: templates/portal/partials/campaign-table.php:62
 #: templates/portal/partials/campaign-variant-comparison.php:50
@@ -948,7 +948,7 @@ msgid "Try again"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:183
-#: templates/portal/screens/account.php:231
+#: templates/portal/screens/account.php:233
 #: templates/portal/screens/organization.php:131
 msgid "Owner"
 msgstr ""
@@ -1182,6 +1182,9 @@ msgid "Allowed"
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:176
+#: inc/Portal/class-report-preference-actions.php:84
+#: inc/Portal/class-report-preference-actions.php:118
+#: templates/portal/partials/report-preferences.php:37
 msgid "Off"
 msgstr ""
 
@@ -1459,6 +1462,7 @@ msgstr ""
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
 #: inc/Portal/class-report-actions.php:81
+#: inc/Portal/class-report-preference-actions.php:47
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-copies.php:83
@@ -1696,10 +1700,10 @@ msgid ""
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:683
-#: inc/Portal/class-delivery-view-data.php:546
-#: inc/Portal/class-delivery-view-data.php:609
-#: inc/Portal/class-delivery-view-data.php:626
-#: inc/Portal/class-delivery-view-data.php:677
+#: inc/Portal/class-delivery-view-data.php:560
+#: inc/Portal/class-delivery-view-data.php:623
+#: inc/Portal/class-delivery-view-data.php:640
+#: inc/Portal/class-delivery-view-data.php:691
 #: templates/portal/partials/campaign-table.php:105
 msgid "—"
 msgstr ""
@@ -1708,9 +1712,9 @@ msgstr ""
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:688
-#: inc/Portal/class-delivery-view-data.php:614
-#: inc/Portal/class-delivery-view-data.php:631
-#: inc/Portal/class-delivery-view-data.php:682
+#: inc/Portal/class-delivery-view-data.php:628
+#: inc/Portal/class-delivery-view-data.php:645
+#: inc/Portal/class-delivery-view-data.php:696
 #: templates/portal/partials/campaign-table.php:102
 #, php-format
 msgid "%s%%"
@@ -1967,7 +1971,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:320 inc/Core/class-post-types.php:198
 #: templates/portal/organization.php:15 templates/portal/partials/rail.php:35
 #: templates/portal/screens/account.php:143
-#: templates/portal/screens/account.php:225
+#: templates/portal/screens/account.php:227
 #: templates/portal/screens/organization.php:29
 #: templates/portal/screens/signup.php:78
 msgid "Organization"
@@ -3262,6 +3266,7 @@ msgid "Rejected"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:210
+#: inc/Portal/class-report-preference-actions.php:110
 #: templates/portal/partials/campaign-status.php:90
 #: templates/portal/screens/help.php:32
 msgid "Scheduled"
@@ -4105,6 +4110,58 @@ msgstr ""
 msgid "Reason given by the advertiser:"
 msgstr ""
 
+#: inc/Notification/class-scheduled-report-mailer.php:61
+msgid "Reconciled"
+msgstr "Rapproché"
+
+#: inc/Notification/class-scheduled-report-mailer.php:62
+msgid "Provisional"
+msgstr "Provisoire"
+
+#: inc/Notification/class-scheduled-report-mailer.php:63
+msgid "Partial"
+msgstr "Partiel"
+
+#. translators: 1: product name. 2: organization name.
+#: inc/Notification/class-scheduled-report-mailer.php:65
+#, php-format
+msgid "%1$s — %2$s delivery report"
+msgstr "%1$s — rapport de diffusion de %2$s"
+
+#. translators: 1: first date. 2: last date. 3: timezone.
+#. translators: 1: first day of the range. 2: last day of the range. 3: timezone identifier, e.g. America/Los_Angeles.
+#: inc/Notification/class-scheduled-report-mailer.php:68
+#: inc/Portal/class-delivery-view-data.php:153
+#, php-format
+msgid "%1$s to %2$s (%3$s)"
+msgstr ""
+
+#. translators: %s: report freshness state.
+#: inc/Notification/class-scheduled-report-mailer.php:69
+#, php-format
+msgid "Report status: %s"
+msgstr "État du rapport : %s"
+
+#: inc/Notification/class-scheduled-report-mailer.php:84
+msgid "Open your report and download its CSV after signing in:"
+msgstr "Connectez-vous pour ouvrir votre rapport et télécharger son CSV :"
+
+#. translators: %s: generation timestamp in UTC.
+#: inc/Notification/class-scheduled-report-mailer.php:87
+#, php-format
+msgid ""
+"Source: native delivery. Generated %s UTC. Portal figures may change as "
+"reconciliation finishes."
+msgstr ""
+"Source : diffusion native des annonces. Généré le %s UTC. Les chiffres du "
+"portail peuvent changer jusqu’à la fin du rapprochement."
+
+#. translators: %s: generation timestamp in UTC.
+#: inc/Notification/class-scheduled-report-mailer.php:88
+msgid "Change or stop report emails in Account settings:"
+msgstr ""
+"Modifiez ou désactivez les e-mails de rapport dans les réglages du compte :"
+
 #: inc/Portal/class-account-actions.php:103
 #: inc/Portal/class-account-actions.php:129
 #: inc/Portal/class-account-actions.php:204
@@ -4858,71 +4915,65 @@ msgstr ""
 msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
-#. translators: 1: first day of the range. 2: last day of the range. 3: timezone identifier, e.g. America/Los_Angeles.
-#: inc/Portal/class-delivery-view-data.php:153
-#, php-format
-msgid "%1$s to %2$s (%3$s)"
-msgstr ""
-
-#: inc/Portal/class-delivery-view-data.php:274
-#: inc/Portal/class-delivery-view-data.php:649
-#: inc/Portal/class-delivery-view-data.php:671
+#: inc/Portal/class-delivery-view-data.php:289
+#: inc/Portal/class-delivery-view-data.php:663
+#: inc/Portal/class-delivery-view-data.php:685
 #: templates/portal/partials/campaign-table.php:121
 msgid "Not measured"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:275
-#: inc/Portal/class-delivery-view-data.php:291
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:305
 #: inc/Portal/class-report-actions.php:254
 #: templates/portal/partials/campaign-table.php:58
 #: templates/portal/partials/campaign-variant-comparison.php:46
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:275
-#: inc/Portal/class-delivery-view-data.php:296
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:310
 #: inc/Portal/class-report-actions.php:255
 #: templates/portal/partials/campaign-table.php:60
 #: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:275
-#: inc/Portal/class-delivery-view-data.php:301
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:315
 #: templates/portal/partials/campaign-table.php:61
 #: templates/portal/partials/campaign-variant-comparison.php:48
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:275
-#: inc/Portal/class-delivery-view-data.php:307
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:321
 #: templates/portal/partials/campaign-variant-comparison.php:49
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:372
+#: inc/Portal/class-delivery-view-data.php:386
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:376
+#: inc/Portal/class-delivery-view-data.php:390
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
 #. translators: %d: creative id.
-#: inc/Portal/class-delivery-view-data.php:532
+#: inc/Portal/class-delivery-view-data.php:546
 #, php-format
 msgid "Ad %d"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:544
+#: inc/Portal/class-delivery-view-data.php:558
 msgid "Before per-ad counting"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:545
+#: inc/Portal/class-delivery-view-data.php:559
 msgid "An ad no longer on this placement"
 msgstr ""
 
@@ -5053,7 +5104,7 @@ msgstr ""
 
 #: inc/Portal/class-report-actions.php:237
 #: inc/Portal/class-report-actions.php:281
-#: inc/Repository/class-rollup-report-repository.php:400
+#: inc/Repository/class-rollup-report-repository.php:415
 msgid ""
 "This report is too large to download. Choose a shorter date range or export "
 "a single campaign."
@@ -5062,7 +5113,7 @@ msgstr ""
 "plus courte ou exportez une seule campagne."
 
 #: inc/Portal/class-report-actions.php:241
-#: inc/Repository/class-rollup-report-repository.php:404
+#: inc/Repository/class-rollup-report-repository.php:419
 msgid "A campaign name is too long to export. Shorten the name and try again."
 msgstr ""
 "Le nom d’une campagne est trop long pour l’exportation. Raccourcissez-le et "
@@ -5081,6 +5132,88 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:256
 msgid "CTR %"
 msgstr ""
+
+#: inc/Portal/class-report-preference-actions.php:86
+#: inc/Portal/class-report-preference-actions.php:134
+#: inc/Workflow/class-scheduled-reports.php:125
+msgid "Report emails are paused while reporting is turned off."
+msgstr ""
+"Les e-mails de rapport sont suspendus tant que les rapports sont désactivés."
+
+#: inc/Portal/class-report-preference-actions.php:88
+msgid "Report scheduling is unavailable. Please contact site staff."
+msgstr ""
+"La programmation des rapports est indisponible. Contactez l’équipe du site."
+
+#: inc/Portal/class-report-preference-actions.php:111
+msgid "Preparing the report."
+msgstr "Préparation du rapport."
+
+#: inc/Portal/class-report-preference-actions.php:112
+msgid "Submitting to the mail service."
+msgstr "Transmission au service de messagerie."
+
+#: inc/Portal/class-report-preference-actions.php:113
+msgid "Queued for delivery. Inbox delivery is not confirmed."
+msgstr ""
+"En file d’envoi. La réception dans la boîte de réception n’est pas confirmée."
+
+#: inc/Portal/class-report-preference-actions.php:114
+msgid "Waiting to retry."
+msgstr "En attente d’une nouvelle tentative."
+
+#: inc/Portal/class-report-preference-actions.php:115
+msgid "The last report could not be queued. The next period remains scheduled."
+msgstr ""
+"Le dernier rapport n’a pas pu être mis en file d’envoi. La période suivante "
+"reste programmée."
+
+#: inc/Portal/class-report-preference-actions.php:116
+msgid "Report emails stopped because account access changed."
+msgstr "Les e-mails de rapport ont été arrêtés car l’accès au compte a changé."
+
+#: inc/Portal/class-report-preference-actions.php:117
+msgid ""
+"The last delivery could not be confirmed and will not be resent "
+"automatically."
+msgstr ""
+"Le dernier envoi n’a pas pu être confirmé et ne sera pas renouvelé "
+"automatiquement."
+
+#: inc/Portal/class-report-preference-actions.php:129
+msgid "Your report email preferences were saved."
+msgstr "Vos préférences d’e-mails de rapport ont été enregistrées."
+
+#: inc/Portal/class-report-preference-actions.php:132
+#: inc/Workflow/class-scheduled-reports.php:119
+#: inc/Workflow/class-scheduled-reports.php:133
+msgid "Report preferences are not available for this account."
+msgstr "Les préférences de rapport ne sont pas disponibles pour ce compte."
+
+#: inc/Portal/class-report-preference-actions.php:133
+#: inc/Workflow/class-scheduled-reports.php:122
+msgid "Choose Off, Weekly, or Monthly."
+msgstr "Choisissez Désactivé, Hebdomadaire ou Mensuel."
+
+#: inc/Portal/class-report-preference-actions.php:135
+#: inc/Workflow/class-scheduled-reports.php:129
+msgid "Report preferences are busy. Please try again."
+msgstr "Les préférences de rapport sont occupées. Veuillez réessayer."
+
+#: inc/Portal/class-report-preference-actions.php:136
+#: inc/Repository/class-report-subscription-repository.php:77
+#: templates/portal/partials/report-preferences.php:26
+msgid "Report preferences could not be loaded. Please try again."
+msgstr ""
+"Les préférences de rapport n’ont pas pu être chargées. Veuillez réessayer."
+
+#: inc/Portal/class-report-preference-actions.php:137
+#: inc/Workflow/class-scheduled-reports.php:148
+#: inc/Workflow/class-scheduled-reports.php:152
+msgid "Report preferences could not be saved. Please try again."
+msgstr ""
+"Les préférences de rapport n’ont pas pu être enregistrées. Veuillez "
+"réessayer."
 
 #: inc/Portal/class-signup-actions.php:126
 msgid ""
@@ -5159,7 +5292,7 @@ msgstr ""
 msgid "The organization could not be renamed."
 msgstr ""
 
-#: inc/Repository/class-rollup-report-repository.php:397
+#: inc/Repository/class-rollup-report-repository.php:412
 msgid "The report could not be loaded. Please try again."
 msgstr "Le rapport n’a pas pu être chargé. Réessayez."
 
@@ -6510,6 +6643,10 @@ msgstr ""
 #: inc/Workflow/class-reviewer-access.php:213
 msgid "You do not have permission to change advertising access."
 msgstr ""
+
+#: inc/Workflow/class-scheduled-reports.php:68
+msgid "Report delivery every five minutes"
+msgstr "Envoi des rapports toutes les cinq minutes"
 
 #: inc/Workflow/class-transition-guards.php:107
 msgid "This campaign is already being reviewed and can no longer be withdrawn."
@@ -8082,6 +8219,65 @@ msgstr ""
 msgid "New campaign"
 msgstr ""
 
+#: templates/portal/partials/report-preferences.php:24
+msgid "Report emails"
+msgstr "E-mails de rapport"
+
+#. translators: 1: organization name. 2: subscriber email address.
+#: templates/portal/partials/report-preferences.php:29
+#, php-format
+msgid "Send me a delivery summary for %1$s at %2$s."
+msgstr "M’envoyer un récapitulatif de diffusion pour %1$s à %2$s."
+
+#: templates/portal/partials/report-preferences.php:35
+msgid "Report frequency"
+msgstr "Fréquence des rapports"
+
+#: templates/portal/partials/report-preferences.php:38
+msgid "Weekly"
+msgstr "Hebdomadaire"
+
+#: templates/portal/partials/report-preferences.php:39
+msgid "Monthly"
+msgstr "Mensuel"
+
+#. translators: %s: site timezone.
+#: templates/portal/partials/report-preferences.php:43
+#, php-format
+msgid ""
+"Weekly reports cover Monday–Sunday and are scheduled on Monday after 9:00 "
+"a.m. Monthly reports cover the previous calendar month and are scheduled on "
+"the first after 9:00 a.m. Times follow %s; actual delivery can be later."
+msgstr ""
+"Les rapports hebdomadaires couvrent du lundi au dimanche et sont programmés "
+"le lundi après 9 h. Les rapports mensuels couvrent le mois civil précédent "
+"et sont programmés le premier après 9 h. Le fuseau horaire %s s’applique ; "
+"l’envoi peut avoir lieu plus tard."
+
+#: templates/portal/partials/report-preferences.php:45
+msgid "Save report preferences"
+msgstr "Enregistrer les préférences de rapport"
+
+#. translators: %s: next scheduled action time.
+#: templates/portal/partials/report-preferences.php:49
+#, php-format
+msgid "Next scheduled run: %s"
+msgstr "Prochaine exécution prévue : %s"
+
+#. translators: %s: last transport-accepted report time.
+#: templates/portal/partials/report-preferences.php:52
+#, php-format
+msgid "Last queued for delivery: %s"
+msgstr "Dernière mise en file d’envoi : %s"
+
+#: templates/portal/partials/report-preferences.php:54
+msgid ""
+"You can turn these emails off here at any time. Report and CSV links require "
+"signing in."
+msgstr ""
+"Vous pouvez désactiver ces e-mails ici à tout moment. Les liens vers les "
+"rapports et les CSV nécessitent une connexion."
+
 #. translators: 1: first day of the range. 2: last day of the range.
 #: templates/portal/partials/sparkline.php:31
 #, php-format
@@ -8206,7 +8402,7 @@ msgid "Email"
 msgstr ""
 
 #: templates/portal/screens/account.php:147
-#: templates/portal/screens/account.php:226
+#: templates/portal/screens/account.php:228
 msgid "Not linked yet"
 msgstr ""
 
@@ -8235,29 +8431,29 @@ msgid ""
 "active until you confirm it while signed in."
 msgstr ""
 
-#: templates/portal/screens/account.php:205
+#: templates/portal/screens/account.php:207
 #: templates/portal/screens/login.php:56
 msgid "Password"
 msgstr ""
 
-#: templates/portal/screens/account.php:206
+#: templates/portal/screens/account.php:208
 msgid "We email you a link to set a new one. It works once."
 msgstr ""
 
-#: templates/portal/screens/account.php:212
+#: templates/portal/screens/account.php:214
 msgid "Email me a reset link"
 msgstr ""
 
-#: templates/portal/screens/account.php:219
+#: templates/portal/screens/account.php:221
 msgid "Your profile"
 msgstr ""
 
-#: templates/portal/screens/account.php:230
+#: templates/portal/screens/account.php:232
 #: templates/portal/screens/organization.php:102
 msgid "Role"
 msgstr ""
 
-#: templates/portal/screens/account.php:231
+#: templates/portal/screens/account.php:233
 #: templates/portal/screens/organization.php:133
 msgid "Member"
 msgstr ""

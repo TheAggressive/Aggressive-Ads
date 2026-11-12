@@ -129,13 +129,15 @@ the most common way a correct installation looks broken a week later.
 wp cron event list --fields=hook,next_run_relative | grep aggr_
 ```
 
-Expect six: `aggr_reconcile_campaigns`, `aggr_notify_ending_soon`,
+Recurring hooks include `aggr_reconcile_campaigns`, `aggr_notify_ending_soon`,
 `aggr_reconcile_fill_rollups`, `aggr_purge_fill_events`,
-`aggr_purge_private_creatives`, `aggr_verify_private_storage`.
+`aggr_purge_private_creatives`, `aggr_purge_audit_log`,
+`aggr_forecast_inventory`, and `aggr_send_scheduled_reports`.
+`aggr_verify_private_storage` is retired.
 
-A seventh, `aggr_migrate_line_items`, appears only while the line-item backfill
-is still running and disappears when it finishes — see step 5a. Its absence on a
-long-established site is the expected state, not a fault.
+`aggr_migrate_line_items` and `aggr_migrate_creative_assignments` appear while
+their respective backfills remain unfinished. Their absence after completion
+is expected — see steps 5a and 5b.
 
 If `DISABLE_WP_CRON` is set — and on any site with real traffic it should be —
 confirm the system cron actually runs:
@@ -149,6 +151,37 @@ confirm the system cron actually runs:
 ```bash
 wp cron event run aggr_reconcile_campaigns
 ```
+
+---
+
+### Scheduled report recovery
+
+Schema 33 adds personal report preferences, all initially Off. A refused table
+creation leaves the migration pending and records `plugin.upgrade_failed`;
+restore database schema permissions and the next upgrade check retries it.
+Test opt-in and
+transport on a disposable account with mail interception first. In Account,
+verify the next run, last queued time, and last result. Queued means transport
+acceptance, not inbox receipt. Missing cron displays an unavailable-scheduling
+message; the next normal initialization retries schedule repair. Verify both
+the scheduled hook and the system runner before investigating mail transport.
+
+The worker takes at most 20 indexed due subscriptions per pass and checks a
+20-second budget between messages. Configure transport timeouts in the mail
+provider; a blocking transport can exceed that between-message budget. Failures
+retry after 5 minutes, 30 minutes, then 2 hours, with four attempts per period.
+Audit events use `report.*` with the `report_subscription` object type. Do not
+copy report contents, addresses, or transport exceptions into support logs.
+
+An interrupted send or failed completion write becomes uncertain. Do not reset
+its state or force a resend without checking the provider's submission records;
+a prior submission may already have been accepted. Later periods still run.
+A late cron sends the latest released period once; it does not replay a backlog.
+Reporting-off pauses delivery; personal Off stops it. Deactivation removes cron
+while preserving preferences; reactivation restores polling. On rollback to
+older code, deactivate this version first and retain the additive subscription
+table for forward recovery. Site deletion/uninstall remove their scoped table.
+See [scheduled report delivery](scheduled-advertiser-reports.md) for scope.
 
 ---
 

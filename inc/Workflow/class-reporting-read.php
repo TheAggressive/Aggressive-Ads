@@ -234,6 +234,32 @@ final class Reporting_Read {
 	}
 
 	/**
+	 * Fresh, error-aware reads for report delivery, using the same aggregate SQL.
+	 *
+	 * @param int           $org_id Authorized organization.
+	 * @param Report_Period $period Calendar window.
+	 * @return array{current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}|\WP_Error
+	 */
+	public function snapshot_for_org( int $org_id, Report_Period $period ): array|\WP_Error {
+		if ( ! $this->surfaces() ) {
+			return new \WP_Error( 'aggr_reporting_disabled' );
+		}
+		$current = $this->reports->checked_totals_for_org( $org_id, $period );
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+		$previous = $this->reports->checked_totals_for_org( $org_id, $period->previous() );
+		if ( is_wp_error( $previous ) ) {
+			return $previous;
+		}
+
+		return array(
+			'current'  => $current,
+			'previous' => $previous,
+		);
+	}
+
+	/**
 	 * One campaign's delivery per placement and creative, or nothing when the
 	 * surface is off.
 	 *

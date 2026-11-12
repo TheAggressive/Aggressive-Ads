@@ -269,14 +269,28 @@ final class Delivery_View_Data {
 
 		$period = $period ?? $this->period();
 
-		if ( ! $this->reporting->history_available( $period ) ) {
+		return $this->format_counts(
+			$this->reporting->history_available( $period ) ? $this->reporting->totals_with_comparison( $org_id, $period, $campaign_id ) : null,
+			$period
+		);
+	}
+
+	/**
+	 * Shared portal/email formatting of already-read facts, without request state.
+	 *
+	 * @param array{current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}|null $read Facts, or unavailable retained history.
+	 * @param Report_Period                                                                                                                                                                                     $period Window being described.
+	 * @return array<int, array{label: string, value: string}>
+	 */
+	public function format_counts( ?array $read, Report_Period $period ): array {
+
+		if ( null === $read || ! $this->reporting->history_available( $period ) ) {
 			return array_map(
 				fn ( string $label ): array => $this->tile( $label, __( 'Not measured', 'aggressive-ads' ), null ),
 				array( __( 'Impressions', 'aggressive-ads' ), __( 'Clicks', 'aggressive-ads' ), __( 'CTR', 'aggressive-ads' ), __( 'Viewable', 'aggressive-ads' ), __( 'Conversions', 'aggressive-ads' ) )
 			);
 		}
 
-		$read     = $this->reporting->totals_with_comparison( $org_id, $period, $campaign_id );
 		$totals   = $read['current'];
 		$was      = $read['previous'];
 		$compare  = $this->reporting->history_complete( $period )
