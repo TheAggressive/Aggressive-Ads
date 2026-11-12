@@ -482,6 +482,18 @@ database topology. Record that result with the release evidence, and do not
 extrapolate the reference throughput to materially different hardware.
 
 
+## Advertiser export limits
+
+Advertiser CSV downloads also have resource budgets: at most 5,000 data rows,
+1,024 bytes per campaign name, and 8 MiB of serialized CSV. The 31-day date cap
+still applies. An over-budget report returns HTTP 422 without an attachment or
+partial CSV. Choose a shorter window or export one campaign; if a name is too
+long, shorten that name and retry. Existing campaign names are never truncated
+or rewritten automatically. A failed report query returns HTTP 503; check
+database availability and retry. No completion state is cached for a refusal.
+See [capacity evidence](delivery-performance.md#advertiser-export-resource-budgets)
+before changing these limits.
+
 ## Local-day reporting upgrades
 
 Schema 32 adds `aggr_report_buckets` without changing UTC pacing counters.

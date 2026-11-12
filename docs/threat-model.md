@@ -149,6 +149,15 @@ Autosave accepts a field allowlist derived from the same schema the validator us
 
 The export is gated on the Reporting module and scoped to the caller's own organization, resolved from the session — never from a request parameter. It is the one bulk read of exactly the data the tenancy boundary exists to separate, so it is tested against a second organization and against house rows rather than only against itself.
 
+Advertiser export resource budgets apply after the frozen tenant/campaign/date
+predicates: 5,000 rows, 1,024 bytes per name, and 8 MiB of serialized CSV. The
+query returns at most one extra row to detect overflow and masks oversized
+names in SQL. A refusal never returns a partial CSV; failed queries cannot
+become successful empty downloads. `ReportExportScaleTest`, `CsvWriterTest`,
+`ReportReadScaleTest`, and the reporting browser spec cover these boundaries.
+The [capacity record](delivery-performance.md#advertiser-export-resource-budgets)
+states the remaining database and deployment limits.
+
 Rate limits apply to upload, autosave, submission, campaign copy, login, signup and password
 recovery. Authenticated
 operations are counted per user; anonymous account operations use a hashed

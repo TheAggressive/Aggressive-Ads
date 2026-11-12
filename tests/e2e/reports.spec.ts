@@ -6,7 +6,7 @@ import {
 	expectPortalA11y,
 } from './accessibility';
 import { signIn } from './sign-in-helper';
-import { wp } from './wp-cli';
+import { wp, wpPluginFile } from './wp-cli';
 
 /**
  * The publisher fill report, in a browser.
@@ -130,5 +130,65 @@ test( 'advertiser local days and UTC exports keep the same selected dates', asyn
 		await expectPortalA11y( page );
 	} finally {
 		wp( 'option', 'update', 'timezone_string', originalZone );
+	}
+} );
+
+test( 'oversized advertiser CSV refuses before attachment headers and recovers', async ( {
+	page,
+} ) => {
+	const campaign = Number(
+		wpPluginFile( 'tests/e2e/seed-report-export.php' ).trim()
+	);
+	expect( campaign ).toBeGreaterThan( 0 );
+	try {
+		await page.goto( '/advertiser/' );
+		await signIn( page, 'advertiser@example.test', 'advertiser' );
+		await page.goto( '/advertiser/?from=2026-08-01&to=2026-08-31&tz=utc' );
+		const nonce = await page
+			.locator(
+				'form:has(input[value="aggr_export_report"]) input[name="_wpnonce"]'
+			)
+			.inputValue();
+		const form = {
+			action: 'aggr_export_report',
+			_wpnonce: nonce,
+			campaign_id: String( campaign ),
+			from: '2026-08-01',
+			to: '2026-08-31',
+			tz: 'utc',
+		};
+		const refusal = await page.request.post( '/wp-admin/admin-post.php', {
+			form,
+		} );
+		expect( refusal.status() ).toBe( 422 );
+		expect( refusal.headers()[ 'content-disposition' ] ).toBeUndefined();
+		expect( refusal.headers()[ 'content-type' ] ).not.toContain(
+			'text/csv'
+		);
+		expect( await refusal.text() ).toContain(
+			'A campaign name is too long to export'
+		);
+		wp(
+			'post',
+			'update',
+			String( campaign ),
+			'--post_title=E2E export recovery'
+		);
+		const download = await page.request.post( '/wp-admin/admin-post.php', {
+			form,
+		} );
+		expect( download.status() ).toBe( 200 );
+		expect( download.headers()[ 'content-type' ] ).toContain( 'text/csv' );
+		expect( download.headers()[ 'content-disposition' ] ).toContain(
+			'attachment;'
+		);
+		const csv = await download.text();
+		expect( csv ).toContain( 'E2E export recovery' );
+		expect( csv ).toContain( '2026-08-12' );
+	} finally {
+		wp(
+			'eval',
+			`global $wpdb; foreach (array('aggr_rollups', 'aggr_report_buckets') as $table) { $wpdb->delete($wpdb->prefix . $table, array('campaign_id' => ${ campaign })); } wp_delete_post(${ campaign }, true);`
+		);
 	}
 } );

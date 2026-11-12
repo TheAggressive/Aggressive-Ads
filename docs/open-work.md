@@ -52,21 +52,6 @@ its currency — read before approval overwrites the old price.
 submission (what the advertiser was shown), not from the package's price at
 settlement time; charge an upgrade's difference and credit a downgrade's.
 
-## Bound reporting export cardinality
-
-The reporting assurance review found that `Report_Actions::MAX_DAYS` limits
-calendar days but not rows. `Rollup_Report_Repository::daily_rows_for_org()`
-materializes campaign/day groups, and the CSV document is assembled in memory.
-An organization with many campaigns can therefore exceed memory or request-time
-budgets even within the 31-day export window. Tenant predicates remain present;
-this is a resource-bound gap, not evidence of a tenant-isolation bypass.
-
-Before approving large-catalogue export capacity, measure representative
-campaign/day cardinality and memory, then implement a documented row/byte budget
-with an explicit refusal or a bounded streaming export. Do not silently truncate
-the report. Keep this entry until the limit and its regression test ship; a
-larger date limit or more worker memory alone does not resolve it.
-
 ## Completed entries
 
 Older completed entries have shipped and been deleted, which is this

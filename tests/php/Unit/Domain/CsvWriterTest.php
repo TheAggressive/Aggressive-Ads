@@ -145,4 +145,33 @@ final class CsvWriterTest extends TestCase {
 		$this->assertStringStartsWith( Csv_Writer::BOM . "Date,Clicks\r\n", $doc );
 		$this->assertStringEndsWith( "2026-08-15,3\r\n", $doc );
 	}
+
+	/** The budget counts actual UTF-8, escaped quotes, BOM, and CRLF bytes. */
+	public function test_bounded_document_accepts_exact_bytes_and_refuses_one_byte_less(): void {
+		$expected = Csv_Writer::BOM . "Name\r\n\"é,\"\"x\"\"\"\r\n";
+		$rows     = array( array( 'é,"x"' ) );
+		$this->assertSame( $expected, Csv_Writer::bounded_document( array( 'Name' ), $rows, 1, strlen( $expected ) ) );
+		$this->assertNull( Csv_Writer::bounded_document( array( 'Name' ), $rows, 1, strlen( $expected ) - 1 ) );
+	}
+
+	/** A refusal returns no partial document and stops consuming the source. */
+	public function test_row_budget_stops_an_iterable_without_silently_truncating_it(): void {
+		$seen = 0;
+		$rows = ( static function () use ( &$seen ): \Generator {
+			for ( $i = 0; $i < 10; ++$i ) {
+				++$seen;
+				yield array( $i );
+			}
+		} )();
+		$this->assertNull( Csv_Writer::bounded_document( array( 'ID' ), $rows, 1, 1000 ) );
+		$this->assertSame( 2, $seen );
+	}
+
+	/** Empty reports still require a complete header, even with a zero-row budget. */
+	public function test_header_is_bounded_and_zero_rows_are_valid(): void {
+		$header = Csv_Writer::BOM . "ID\r\n";
+		$this->assertSame( $header, Csv_Writer::bounded_document( array( 'ID' ), array(), 0, strlen( $header ) ) );
+		$this->assertNull( Csv_Writer::bounded_document( array( 'ID' ), array(), 0, strlen( $header ) - 1 ) );
+		$this->assertNull( Csv_Writer::bounded_document( array( 'ID' ), array(), -1, 1000 ) );
+	}
 }

@@ -458,6 +458,13 @@ organization — staff opening a client's campaign see that client's figures.
 `Report_Actions` accepts `campaign_id` and answers a campaign the caller may not
 read exactly as one that does not exist.
 
+Advertiser CSVs refuse an over-budget report before sending an attachment:
+5,000 rows, 1,024 bytes per campaign name, or 8 MiB of serialized CSV. The error
+explains how to narrow the report or shorten an oversized name; no rows or names
+are silently truncated to fit. A failed database read asks the user to retry
+instead of downloading an empty file. The existing date-window button still
+names the number of days actually exported.
+
 The campaigns list has tabs for the same slices with their counts, the current
 one marked, and a name search: a GET form (`?search=`, kept across tabs, 100
 characters) whose query narrows the organization-scoped `for_org()` read to
