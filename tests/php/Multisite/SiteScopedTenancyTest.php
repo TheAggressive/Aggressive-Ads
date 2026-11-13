@@ -335,6 +335,9 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 	/** Planning facts with identical placement ids remain isolated across repeated site switches. */
 	public function test_inventory_reader_keeps_forecasts_and_reservations_site_scoped(): void {
 		$this->network_activate();
+		$clock      = time();
+		$from       = gmdate( 'Y-m-d', $clock + 10 * DAY_IN_SECONDS );
+		$to         = gmdate( 'Y-m-d', $clock + 12 * DAY_IN_SECONDS );
 		$sites      = array( (int) self::factory()->blog->create(), (int) self::factory()->blog->create() );
 		$reader     = new \Aggressive\Ads\Repository\Inventory_Availability_Repository();
 		$holds      = array();
@@ -342,7 +345,7 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		foreach ( $sites as $index => $site ) {
 			$this->on_site(
 				$site,
-				function () use ( $index, &$holds, &$placements ): void {
+				function () use ( $index, &$holds, &$placements, $from, $to ): void {
 					$id           = (int) self::factory()->post->create(
 						array(
 							'post_type' => Post_Types::PLACEMENT,
@@ -355,8 +358,8 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 						( new \Aggressive\Ads\Repository\Forecast_Repository() )->record(
 							$id,
 							'page',
-							'2027-01-01',
-							'2027-01-03',
+							$from,
+							$to,
 							array(
 								'estimate'      => 0 === $index ? 100 : 50,
 								'optimistic'    => 200,
@@ -371,8 +374,8 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 							array(
 								'placement'        => $id,
 								'opportunity'      => 'page',
-								'from'             => '2027-01-01',
-								'to'               => '2027-01-03',
+								'from'             => $from,
+								'to'               => $to,
 								'campaign'         => 0,
 								'org'              => 1,
 								'quantity'         => 100,
@@ -390,8 +393,8 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		foreach ( $sites as $index => $site ) {
 			$this->on_site(
 				$site,
-				function () use ( $index, $reader, $placements ): void {
-					$this->assertSame( 0 === $index ? 'unavailable' : 'available', $reader->assess( array( $placements[ $index ] ), strtotime( '2027-01-01 UTC' ), strtotime( '2027-01-03 23:59:59 UTC' ), time() ) );
+				function () use ( $index, $reader, $placements, $from, $to ): void {
+					$this->assertSame( 0 === $index ? 'unavailable' : 'available', $reader->assess( array( $placements[ $index ] ), strtotime( $from . ' UTC' ), strtotime( $to . ' 23:59:59 UTC' ), time() ) );
 				}
 			);
 		}
@@ -403,14 +406,14 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		);
 		$this->on_site(
 			$sites[1],
-			function () use ( $placements ): void {
+			function () use ( $placements, $from, $to ): void {
 				$this->assertSame(
 					2,
 					( new \Aggressive\Ads\Repository\Forecast_Repository() )->record(
 						$placements[1],
 						'page',
-						'2027-01-01',
-						'2027-01-03',
+						$from,
+						$to,
 						array(
 							'estimate'      => 0,
 							'optimistic'    => 0,
@@ -425,8 +428,8 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		foreach ( $sites as $index => $site ) {
 			$this->on_site(
 				$site,
-				function () use ( $index, $reader, $placements ): void {
-					$this->assertSame( 0 === $index ? 'available' : 'unavailable', $reader->assess( array( $placements[ $index ] ), strtotime( '2027-01-01 UTC' ), strtotime( '2027-01-03 23:59:59 UTC' ), time() ) );
+				function () use ( $index, $reader, $placements, $from, $to ): void {
+					$this->assertSame( 0 === $index ? 'available' : 'unavailable', $reader->assess( array( $placements[ $index ] ), strtotime( $from . ' UTC' ), strtotime( $to . ' 23:59:59 UTC' ), time() ) );
 				}
 			);
 		}

@@ -311,6 +311,36 @@ final class InventoryStorefrontTest extends WP_UnitTestCase {
 		$this->assertSame( 'limited', $this->state() );
 	}
 
+	/** A whole-day forecast cannot describe the unelapsed portion of a flight already underway. */
+	public function test_started_flights_require_confirmation_even_with_a_matching_fresh_forecast(): void {
+		$from = gmdate( 'Y-m-d' );
+		$to   = gmdate( 'Y-m-d', time() + 2 * DAY_IN_SECONDS );
+		$this->assertGreaterThan(
+			0,
+			( new Forecast_Repository() )->record(
+				$this->placement,
+				'page',
+				$from,
+				$to,
+				array(
+					'estimate'      => 100,
+					'optimistic'    => 200,
+					'confidence'    => 'high',
+					'days_observed' => 30,
+					'days_forecast' => 3,
+				)
+			)
+		);
+		$this->assertSame( 'limited', ( new Inventory_Availability_Repository() )->assess( array( $this->placement ), strtotime( $from . ' UTC' ), strtotime( $to . ' 23:59:59 UTC' ), time() ) );
+		$input               = $this->input();
+		$input['start_date'] = $from;
+		$input['check']      = '1';
+		$model               = $this->view->view( $input );
+		$this->assertIsArray( $model );
+		$this->assertIsArray( $model['plan'] );
+		$this->assertSame( 'Limited — confirm with the publisher', $model['availability'] );
+	}
+
 	/** Missing, stale and future-dated assessments cannot become measured availability. */
 	public function test_snapshot_freshness_and_latest_version_are_preserved(): void {
 		global $wpdb;

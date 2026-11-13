@@ -24,14 +24,15 @@ implicitly turn a campaign goal into reserved inventory.
 The public answer describes whether some page-opportunity inventory remains;
 it does not quote or promise an impression quantity:
 
-- **Available to request:** every included placement has a matching forecast
-  made within the last 24 hours and some inventory remains after consuming
+- **Available to request:** the flight has not begun; every included placement
+  has a matching forecast made within the last 24 hours and some inventory remains after consuming
   exact-window reservations.
 - **Unavailable for these dates:** a complete, current assessment finds no
   remaining inventory for at least one required placement.
 - **Limited — confirm with the publisher:** the assessment needs confirmation.
-  This includes absent/stale/future-dated snapshots, another overlapping
-  reservation window, incomplete UTC-day coverage, or the input read limit.
+  This includes flights already underway, absent/stale/future-dated snapshots,
+  another overlapping reservation window, incomplete UTC-day coverage, or the
+  input read limit.
 
 Forecasts currently describe exact UTC calendar windows. A site-local flight
 whose boundaries split UTC days cannot be inferred from those daily totals.

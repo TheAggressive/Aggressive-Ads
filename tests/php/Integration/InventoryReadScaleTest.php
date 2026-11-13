@@ -17,6 +17,27 @@ use WP_UnitTestCase;
 
 final class InventoryReadScaleTest extends WP_UnitTestCase {
 
+	/**
+	 * Selected future UTC window.
+	 *
+	 * @var string
+	 */
+	private string $from;
+	/**
+	 * Last selected UTC day.
+	 *
+	 * @var string
+	 */
+	private string $to;
+
+	/** Keep future-window fixtures independent of the year the suite runs. */
+	public function set_up(): void {
+		parent::set_up();
+		$now        = time();
+		$this->from = gmdate( 'Y-m-d', $now + 10 * DAY_IN_SECONDS );
+		$this->to   = gmdate( 'Y-m-d', $now + 12 * DAY_IN_SECONDS );
+	}
+
 	/** An old/released prefix still counts toward input work, rather than hiding an unbounded scan. */
 	public function test_reservation_inputs_are_bounded_before_filtering_and_aggregation(): void {
 		global $wpdb;
@@ -33,8 +54,8 @@ final class InventoryReadScaleTest extends WP_UnitTestCase {
 			array(
 				'placement'        => $id,
 				'opportunity'      => 'page',
-				'from'             => '2027-01-01',
-				'to'               => '2027-01-03',
+				'from'             => $this->from,
+				'to'               => $this->to,
 				'campaign'         => 0,
 				'org'              => 12,
 				'quantity'         => 1,
@@ -49,7 +70,7 @@ final class InventoryReadScaleTest extends WP_UnitTestCase {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Bounded physical fixture at the production ledger grain, larger than the read guard independently of its constant.
 			$this->assertSame( 1000, $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (placement_id,opportunity,window_start,window_end,quantity,status) VALUES ' . implode( ',', $values ), ...$args ) ) );
 		}
-		$this->assertSame( 'limited', ( new Inventory_Availability_Repository() )->assess( $ids, strtotime( '2027-01-01 UTC' ), strtotime( '2027-01-03 23:59:59 UTC' ), time() ) );
+		$this->assertSame( 'limited', ( new Inventory_Availability_Repository() )->assess( $ids, strtotime( $this->from . ' UTC' ), strtotime( $this->to . ' 23:59:59 UTC' ), time() ) );
 		$sql = $wpdb->last_query;
 		$this->assertSame( 4097, array_sum( array_map( static fn ( object $row ): int => (int) $row->input_rows, $wpdb->last_result ) ) );
 		$this->assertCount( 1, $wpdb->last_result, 'Only an aggregate, never the raw input rows, reaches PHP.' );
@@ -65,8 +86,8 @@ final class InventoryReadScaleTest extends WP_UnitTestCase {
 			$values = array();
 			$args   = array( ( new Forecast_Repository() )->table_name() );
 			for ( $version = 2; $version <= 1001; ++$version ) {
-				$values[] = "(%d,'page','2027-01-01','2027-01-03',%d,100,%s)";
-				array_push( $args, $id, $version, gmdate( 'Y-m-d H:i:s' ) );
+				$values[] = "(%d,'page',%s,%s,%d,100,%s)";
+				array_push( $args, $id, $this->from, $this->to, $version, gmdate( 'Y-m-d H:i:s' ) );
 			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Real writer establishes the first snapshot; bounded physical older-version fixture tests the same unique native grain.
 			$this->assertSame( 1000, $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (placement_id,opportunity,window_start,window_end,version,estimate,made_at) VALUES ' . implode( ',', $values ), ...$args ) ) );
@@ -80,7 +101,7 @@ final class InventoryReadScaleTest extends WP_UnitTestCase {
 		};
 		add_filter( 'query', $capture );
 		try {
-			$this->assertSame( 'available', ( new Inventory_Availability_Repository() )->assess( $ids, strtotime( '2027-01-01 UTC' ), strtotime( '2027-01-03 23:59:59 UTC' ), time() ) );
+			$this->assertSame( 'available', ( new Inventory_Availability_Repository() )->assess( $ids, strtotime( $this->from . ' UTC' ), strtotime( $this->to . ' 23:59:59 UTC' ), time() ) );
 		} finally {
 			remove_filter( 'query', $capture );
 		}
@@ -123,8 +144,8 @@ final class InventoryReadScaleTest extends WP_UnitTestCase {
 			( new Forecast_Repository() )->record(
 				$id,
 				'page',
-				'2027-01-01',
-				'2027-01-03',
+				$this->from,
+				$this->to,
 				array(
 					'estimate'      => 100,
 					'optimistic'    => 200,

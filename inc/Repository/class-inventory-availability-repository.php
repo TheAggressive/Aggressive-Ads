@@ -83,7 +83,7 @@ final class Inventory_Availability_Repository {
 				return $this->error();
 			}
 			$made      = null === $forecast ? false : strtotime( $forecast['made_at'] . ' UTC' );
-			$uncertain = $partial_days || false === $made || $made < $now - DAY_IN_SECONDS || $made > $now || ! empty( $reservations[ $id ]['other_window'] );
+			$uncertain = $start <= $now || $partial_days || false === $made || $made < $now - DAY_IN_SECONDS || $made > $now || ! empty( $reservations[ $id ]['other_window'] );
 			$states[]  = Inventory_Availability::placement_state( $capacity, $committed, $uncertain );
 		}
 		return Inventory_Availability::package_state( $states );
