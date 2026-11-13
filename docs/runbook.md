@@ -156,6 +156,14 @@ wp cron event run aggr_reconcile_campaigns
 
 ### Scheduled report recovery
 
+Campaign goal summaries use schema 34 indexes on the existing line-item and
+projection tables. Failed index creation leaves the schema marker behind;
+restore database DDL permissions and let the next upgrade check retry. Plan
+index builds using actual table sizes and a suitable maintenance window.
+Summary scan limits produce Not measured totals with a disclosure; they do not
+truncate a number and claim it is complete. See the
+[campaign summary contract](campaign-report-summaries.md).
+
 Schema 33 adds personal report preferences, all initially Off. A refused table
 creation leaves the migration pending and records `plugin.upgrade_failed`;
 restore database schema permissions and the next upgrade check retries it.

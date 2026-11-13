@@ -283,52 +283,55 @@ final class Delivery_View_Data {
 	 * @return array<int, array{label: string, value: string}>
 	 */
 	public function format_counts( ?array $read, Report_Period $period ): array {
-
 		if ( null === $read || ! $this->reporting->history_available( $period ) ) {
-			return array_map(
-				fn ( string $label ): array => $this->tile( $label, __( 'Not measured', 'aggressive-ads' ), null ),
-				array( __( 'Impressions', 'aggressive-ads' ), __( 'Clicks', 'aggressive-ads' ), __( 'CTR', 'aggressive-ads' ), __( 'Viewable', 'aggressive-ads' ), __( 'Conversions', 'aggressive-ads' ) )
+			return array_map( fn ( array $metric ): array => $this->tile( $metric['label'], $metric['value'], null ), array_values( $this->metric_values( null ) ) );
+		}
+		$totals  = $read['current'];
+		$was     = $read['previous'];
+		$compare = $this->reporting->history_complete( $period ) && $this->reporting->history_complete( $period->previous() );
+		$deltas  = array(
+			'impressions' => Reporting_Rules::change( $totals['impressions'], $was['impressions'] ),
+			'clicks'      => Reporting_Rules::change( $totals['clicks'], $was['clicks'] ),
+			'ctr'         => Reporting_Rules::point_change( Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] ), Reporting_Rules::ctr( $was['impressions'], $was['clicks'] ) ),
+			'viewables'   => Reporting_Rules::point_change( Reporting_Rules::viewability( $totals['impressions'], $totals['viewables'] ), Reporting_Rules::viewability( $was['impressions'], $was['viewables'] ) ),
+			'conversions' => Reporting_Rules::change( $totals['conversions'], $was['conversions'] ),
+		);
+		$tiles   = array();
+		foreach ( $this->metric_values( $totals ) as $key => $metric ) {
+			$tiles[] = $this->tile( $metric['label'], $metric['value'], $compare ? $deltas[ $key ] : null, in_array( $key, array( 'ctr', 'viewables' ), true ) );
+		}
+		return $tiles;
+	}
+
+	/**
+	 * Shared metric labels and values for org, campaign, and delivery-plan reports.
+	 *
+	 * @param array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}|null $totals Native counts, or unavailable history.
+	 * @return array<string, array{label: string, value: string}>
+	 */
+	public function metric_values( ?array $totals ): array {
+		$labels = array(
+			'impressions' => __( 'Impressions', 'aggressive-ads' ),
+			'clicks'      => __( 'Clicks', 'aggressive-ads' ),
+			'ctr'         => __( 'CTR', 'aggressive-ads' ),
+			'viewables'   => __( 'Viewable', 'aggressive-ads' ),
+			'conversions' => __( 'Conversions', 'aggressive-ads' ),
+		);
+		$values = null === $totals ? array_fill_keys( array_keys( $labels ), __( 'Not measured', 'aggressive-ads' ) ) : array(
+			'impressions' => $this->format_count( $totals['impressions'] ),
+			'clicks'      => $this->format_count( $totals['clicks'] ),
+			'ctr'         => $this->format_ctr( Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] ) ),
+			'viewables'   => $this->format_viewability( $totals['impressions'], $totals['viewables'] ),
+			'conversions' => $this->format_count( $totals['conversions'] ),
+		);
+		$result = array();
+		foreach ( $labels as $key => $label ) {
+			$result[ $key ] = array(
+				'label' => $label,
+				'value' => $values[ $key ],
 			);
 		}
-
-		$totals   = $read['current'];
-		$was      = $read['previous'];
-		$compare  = $this->reporting->history_complete( $period )
-			&& $this->reporting->history_complete( $period->previous() );
-		$ctr      = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
-		$ctr_was  = Reporting_Rules::ctr( $was['impressions'], $was['clicks'] );
-		$view     = Reporting_Rules::viewability( $totals['impressions'], $totals['viewables'] );
-		$view_was = Reporting_Rules::viewability( $was['impressions'], $was['viewables'] );
-
-		return array(
-			$this->tile(
-				__( 'Impressions', 'aggressive-ads' ),
-				(string) number_format_i18n( $totals['impressions'] ),
-				$compare ? Reporting_Rules::change( $totals['impressions'], $was['impressions'] ) : null
-			),
-			$this->tile(
-				__( 'Clicks', 'aggressive-ads' ),
-				(string) number_format_i18n( $totals['clicks'] ),
-				$compare ? Reporting_Rules::change( $totals['clicks'], $was['clicks'] ) : null
-			),
-			$this->tile(
-				__( 'CTR', 'aggressive-ads' ),
-				$this->format_ctr( $ctr ),
-				$compare ? Reporting_Rules::point_change( $ctr, $ctr_was ) : null,
-				true
-			),
-			$this->tile(
-				__( 'Viewable', 'aggressive-ads' ),
-				$this->format_viewability( $totals['impressions'], $totals['viewables'] ),
-				$compare ? Reporting_Rules::point_change( $view, $view_was ) : null,
-				true
-			),
-			$this->tile(
-				__( 'Conversions', 'aggressive-ads' ),
-				$this->format_count( $totals['conversions'] ),
-				$compare ? Reporting_Rules::change( $totals['conversions'], $was['conversions'] ) : null
-			),
-		);
+		return $result;
 	}
 
 	/**

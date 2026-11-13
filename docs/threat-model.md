@@ -338,3 +338,19 @@ against a definition that organization owns.
 No cross-visit identifier exists. That is why view-through attribution is
 defined and deliberately unshipped — it needs the identifier P11 declined to
 invent, and P27 is its gate.
+
+## Campaign goal summaries
+
+Portal scope comes from membership/authorized acting context, and email scope
+from the existing recipient-authorized worker. `Campaign_Report_Repository`
+requires both line-item organization and authoritative parent ownership; raw
+projection reads also constrain organization, campaign and plan ids. A forged
+cursor cannot change tenant scope. Names are bounded in SQL and rendered with
+context escaping. Failed reads cannot become measured-zero emails.
+
+`CampaignReportTest` exercises parent-scope forgery, foreign projection rows,
+actual dashboard scope/escaping attachment, and failure/recovery.
+`CampaignReportScaleTest` measures the production queries' actual input rows;
+`CampaignReportIndexesTest` proves failed DDL does not commit migration progress.
+The durable read limits and current-versus-period semantics live in the
+[campaign summary contract](campaign-report-summaries.md).

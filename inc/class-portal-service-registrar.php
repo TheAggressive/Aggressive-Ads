@@ -27,6 +27,8 @@ use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Portal\Campaign_Report_View_Data;
+use Aggressive\Ads\Repository\Campaign_Report_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -80,6 +82,14 @@ final class Portal_Service_Registrar {
 	 * @return void
 	 */
 	public function register( Service_Container $container ): void {
+		$container->register(
+			Campaign_Report_View_Data::class,
+			static fn ( Service_Container $c ): Campaign_Report_View_Data => new Campaign_Report_View_Data(
+				$c->get( Campaign_Report_Repository::class ),
+				$c->get( Reporting_Read::class ),
+				$c->get( Delivery_View_Data::class )
+			)
+		);
 		$container->register(
 			\Aggressive\Ads\Portal\Report_Preference_Actions::class,
 			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Report_Preference_Actions => new \Aggressive\Ads\Portal\Report_Preference_Actions(

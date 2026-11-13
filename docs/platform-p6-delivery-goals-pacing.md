@@ -103,3 +103,9 @@ and stopped delivering early, with nothing reporting why. The live counter
 resolves the line item from the assignment that served the fill; the daily
 reconcile recovers the same attribution with a join, which is durable because
 withdrawal retires an assignment rather than deleting it.
+
+Campaign goal reports reuse `Pacing_Rules::flight_progress()` for elapsed-flight
+fraction. Their goal pacing compares native goal units against the configured
+goal; it does not claim to expose the serving engine's cap/throttle decision.
+Current settings are separate from selected-period delivery. See
+[campaign report summaries](campaign-report-summaries.md).

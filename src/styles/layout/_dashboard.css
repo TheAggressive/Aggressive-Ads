@@ -549,3 +549,25 @@
 .aggr-start__choice:hover {
 	border-color: var(--aggr-color-accent);
 }
+
+
+.aggr-campaign-reports {
+	margin-block: var(--aggr-space-lg);
+}
+
+.aggr-campaign-reports details {
+	padding-block: var(--aggr-space-sm);
+	border-block-end: 1px solid var(--aggr-border-color);
+}
+
+.aggr-campaign-reports summary {
+	padding-block: var(--aggr-space-sm);
+	font-weight: 600;
+	cursor: pointer;
+	overflow-wrap: anywhere;
+}
+
+.aggr-campaign-reports .aggr-plan-summary > div {
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}

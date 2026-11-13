@@ -56,6 +56,7 @@ final class Schema_Report_Buckets {
 	KEY campaign_bucket (campaign_id,bucket_utc),
 	KEY line_item_bucket (line_item_id,bucket_utc),
 	KEY org_bucket (org_id,bucket_utc),
+	KEY org_campaign_line_bucket (org_id,campaign_id,line_item_id,bucket_utc),
 	KEY creative_bucket (creative_id,bucket_utc)
 ) {$charset_collate};";
 	}
@@ -88,6 +89,6 @@ final class Schema_Report_Buckets {
 	 * @return list<string>
 	 */
 	public static function index_names(): array {
-		return array( 'PRIMARY', 'slot_creative_bucket', 'campaign_bucket', 'line_item_bucket', 'org_bucket', 'creative_bucket' );
+		return array( 'PRIMARY', 'slot_creative_bucket', 'campaign_bucket', 'line_item_bucket', 'org_bucket', 'org_campaign_line_bucket', 'creative_bucket' );
 	}
 }

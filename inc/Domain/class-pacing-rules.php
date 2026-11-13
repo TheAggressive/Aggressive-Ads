@@ -55,10 +55,7 @@ final class Pacing_Rules {
 
 		// 4. EVEN mode flight schedule velocity evaluation.
 		if ( self::MODE_EVEN === $pacing_mode && $lifetime_cap > 0 && $start_at_ts > 0 && $end_at_ts > $start_at_ts ) {
-			$duration = $end_at_ts - $start_at_ts;
-			$elapsed  = max( 0, min( $duration, $now - $start_at_ts ) );
-
-			$time_ratio      = (float) $elapsed / (float) $duration;
+			$time_ratio      = self::flight_progress( $start_at_ts, $end_at_ts, $now );
 			$delivered_ratio = (float) $delivered_life / (float) $lifetime_cap;
 
 			// If delivered percentage exceeds expected time elapsed plus tolerance, throttle.
@@ -80,6 +77,20 @@ final class Pacing_Rules {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Elapsed fraction of a valid flight, shared by serving and report progress.
+	 *
+	 * @param int $start Flight start timestamp.
+	 * @param int $end Flight end timestamp.
+	 * @param int $now Evaluation timestamp.
+	 */
+	public static function flight_progress( int $start, int $end, int $now ): float {
+		if ( $start <= 0 || $end <= $start ) {
+			return 0.0;
+		}
+		return max( 0.0, min( 1.0, ( $now - $start ) / ( $end - $start ) ) );
 	}
 
 	/**

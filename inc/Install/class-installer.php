@@ -158,6 +158,7 @@ final class Installer {
 		( new Report_Bucket_Repository() )->begin_backfill();
 		$this->install_line_items();
 		$this->install_creative_model();
+		( new \Aggressive\Ads\Repository\Campaign_Report_Repository() )->verify_indexes();
 
 		$this->install_roles();
 
