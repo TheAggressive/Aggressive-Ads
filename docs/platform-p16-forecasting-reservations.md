@@ -416,11 +416,10 @@ three seconds later, as a refusal nobody can reproduce.
 
 ### What this phase deliberately did not do
 
-- **No advertiser-facing booking flow.** `Booking_Service` is staff-only behind
-  `MANAGE_PLACEMENTS`. The advertiser-facing answer exists in the domain
-  (`Availability::bookable()`) and exposes no number, but nothing in the portal
-  calls it yet — there is no screen where an advertiser asks for inventory.
-  Recorded here rather than left as an assumption: the domain half is finished
-  and untested against a caller because it has none.
+- **Reservation writes remain staff-only.** `Booking_Service` requires
+  `MANAGE_PLACEMENTS`. The later [advertiser storefront](advertiser-inventory-storefront.md)
+  reuses P16 facts and availability rules for a bounded, status-only assessment
+  and hands dated requests to campaign review. It creates no reservation and
+  exposes no forecast quantity or staff override detail.
 - **No spend or price.** Reservations hold opportunities, not money. Billing
   has no source, so a reservation cannot be costed.

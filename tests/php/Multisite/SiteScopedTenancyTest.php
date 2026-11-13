@@ -21,6 +21,7 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Reservation_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Fill_Token;
@@ -326,6 +327,109 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 					$totals = $reader->totals( $identities[ $index ][0], $page['rows'], null, strtotime( '2026-11-16 UTC' ) );
 					$this->assertIsArray( $totals );
 					$this->assertSame( $index + 1, $totals['totals'][ $identities[ $index ][2] ]['impressions'] );
+				}
+			);
+		}
+	}
+
+	/** Planning facts with identical placement ids remain isolated across repeated site switches. */
+	public function test_inventory_reader_keeps_forecasts_and_reservations_site_scoped(): void {
+		$this->network_activate();
+		$clock      = time();
+		$from       = gmdate( 'Y-m-d', $clock + 10 * DAY_IN_SECONDS );
+		$to         = gmdate( 'Y-m-d', $clock + 12 * DAY_IN_SECONDS );
+		$sites      = array( (int) self::factory()->blog->create(), (int) self::factory()->blog->create() );
+		$reader     = new \Aggressive\Ads\Repository\Inventory_Availability_Repository();
+		$holds      = array();
+		$placements = array();
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $index, &$holds, &$placements, $from, $to ): void {
+					$id           = (int) self::factory()->post->create(
+						array(
+							'post_type' => Post_Types::PLACEMENT,
+							'import_id' => 46000,
+						)
+					);
+					$placements[] = $id;
+					$this->assertSame(
+						1,
+						( new \Aggressive\Ads\Repository\Forecast_Repository() )->record(
+							$id,
+							'page',
+							$from,
+							$to,
+							array(
+								'estimate'      => 0 === $index ? 100 : 50,
+								'optimistic'    => 200,
+								'confidence'    => 'high',
+								'days_observed' => 30,
+								'days_forecast' => 3,
+							)
+						)
+					);
+					if ( 0 === $index ) {
+						$hold = ( new Reservation_Repository() )->claim(
+							array(
+								'placement'        => $id,
+								'opportunity'      => 'page',
+								'from'             => $from,
+								'to'               => $to,
+								'campaign'         => 0,
+								'org'              => 1,
+								'quantity'         => 100,
+								'capacity'         => 100,
+								'forecast_version' => 1,
+							)
+						);
+						$this->assertGreaterThan( 0, $hold['id'] );
+						$holds[] = $hold['id'];
+					}
+				}
+			);
+		}
+		$this->assertSame( $placements[0], $placements[1], 'Isolation requires a real id collision, not disjoint fixtures.' );
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $index, $reader, $placements, $from, $to ): void {
+					$this->assertSame( 0 === $index ? 'unavailable' : 'available', $reader->assess( array( $placements[ $index ] ), strtotime( $from . ' UTC' ), strtotime( $to . ' 23:59:59 UTC' ), time() ) );
+				}
+			);
+		}
+		$this->on_site(
+			$sites[0],
+			function () use ( $holds ): void {
+				$this->assertTrue( ( new Reservation_Repository() )->move( $holds[0], 'held', 'released' ) );
+			}
+		);
+		$this->on_site(
+			$sites[1],
+			function () use ( $placements, $from, $to ): void {
+				$this->assertSame(
+					2,
+					( new \Aggressive\Ads\Repository\Forecast_Repository() )->record(
+						$placements[1],
+						'page',
+						$from,
+						$to,
+						array(
+							'estimate'      => 0,
+							'optimistic'    => 0,
+							'confidence'    => 'high',
+							'days_observed' => 30,
+							'days_forecast' => 3,
+						)
+					)
+				);
+			}
+		);
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $index, $reader, $placements, $from, $to ): void {
+					$this->assertSame( 0 === $index ? 'available' : 'unavailable', $reader->assess( array( $placements[ $index ] ), strtotime( $from . ' UTC' ), strtotime( $to . ' 23:59:59 UTC' ), time() ) );
 				}
 			);
 		}

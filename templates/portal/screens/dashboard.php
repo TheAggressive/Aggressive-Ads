@@ -185,7 +185,7 @@ $aggr_start_packages = $aggr_can_create ? $aggr_view->package_options() : array(
 			<section class="aggr-summary" aria-labelledby="aggr-start-heading">
 				<div>
 					<h2 id="aggr-start-heading" class="aggr-eyebrow"><?php esc_html_e( 'Start a campaign', 'aggressive-ads' ); ?></h2>
-					<p class="aggr-hint"><?php esc_html_e( 'Pick a package. Dates and ads come next.', 'aggressive-ads' ); ?></p>
+					<p class="aggr-hint"><?php esc_html_e( 'Pick a package. Dates and ads come next.', 'aggressive-ads' ); ?> <a href="<?php echo esc_url( Routes::url( Request::ROUTE_INVENTORY ) ); ?>"><?php esc_html_e( 'Browse inventory and check dates', 'aggressive-ads' ); ?></a></p>
 				</div>
 
 				<form class="aggr-start" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

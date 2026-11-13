@@ -54,6 +54,7 @@ final class Repository_Service_Registrar {
 	 * @param Service_Container $container Container to populate.
 	 */
 	public function register( Service_Container $container ): void {
+		$container->register( \Aggressive\Ads\Repository\Inventory_Availability_Repository::class, static fn (): \Aggressive\Ads\Repository\Inventory_Availability_Repository => new \Aggressive\Ads\Repository\Inventory_Availability_Repository() );
 		$container->register( Campaign_Report_Repository::class, static fn (): Campaign_Report_Repository => new Campaign_Report_Repository() );
 		$container->register(
 			\Aggressive\Ads\Repository\Report_Subscription_Repository::class,

@@ -168,9 +168,14 @@ weekly/monthly delivery (#365) and shared campaign goal/pacing summaries (#367).
 See [delivery scope and operating requirements](scheduled-advertiser-reports.md).
 Expiring share links and presentation/PDF exports are optional follow-up work.
 
+Completed: #280 advertiser inventory storefront and requests (#369). The
+authenticated catalogue carries package/date selections into campaign review
+and provides bounded availability answers. Reservations remain staff-managed;
+no reach or inventory quantity is promised. See
+[request semantics and limits](advertiser-inventory-storefront.md).
+
 Current product issues include:
 
-- #280 advertiser inventory storefront/booking;
 - #281 campaign templates / reusable sales-product presets;
 - #282 proposal, quote and insertion-order workflow;
 - #283 publisher sales/revenue dashboard;

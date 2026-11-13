@@ -10,9 +10,10 @@ Base segment comes from settings, default `advertiser`.
 /advertiser/{route}/{object}/       → a screen scoped to one object
 ```
 
-Routes: `campaigns`, `organization`, `account`, `help`, plus the public `login`
-and `signup` account-entry screens. So `/advertiser/campaigns/123/` is the
-campaign detail screen. Public routes never accept an object segment.
+Authenticated routes include `campaigns`, `inventory`, `organization`, `account`
+and `help`; `Request::public_routes()` names the public account-entry screens.
+So `/advertiser/campaigns/123/` is the campaign detail screen. Public routes never
+accept an object segment.
 
 Three rewrite rules, registered `top`:
 
@@ -104,6 +105,12 @@ Creation starts from a nonce-protected form on the dashboard or campaign list.
 It creates an organization-scoped `aggr_draft` and redirects to the ordinary
 `/advertiser/campaigns/{id}/` detail URL, keeping the documented URL grammar
 numeric rather than inventing a special `new` object segment.
+
+Inventory also offers a dated package request. Its nonce-protected POST uses the
+same campaign writer and creation budget, resolving ownership from membership
+and revalidating the package/window before saving. It creates a draft for the
+normal review workflow, not an inventory reservation. See
+[storefront semantics and limits](advertiser-inventory-storefront.md).
 
 The dashboard also lists each active package as a button in one create form.
 The button pressed posts its own `package_id`, so choosing what to buy and

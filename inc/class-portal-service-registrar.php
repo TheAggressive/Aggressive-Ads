@@ -83,6 +83,37 @@ final class Portal_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
+			\Aggressive\Ads\Portal\Catalogue_View_Data::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Catalogue_View_Data => new \Aggressive\Ads\Portal\Catalogue_View_Data(
+				$c->get( Placement_Repository::class ),
+				$c->get( Package_Repository::class ),
+				$c->get( Campaign_Editor::class ),
+				$c->get( Settings::class )
+			)
+		);
+		$container->register(
+			\Aggressive\Ads\Workflow\Storefront_Request::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Storefront_Request => new \Aggressive\Ads\Workflow\Storefront_Request(
+				$c->get( Campaign_Editor::class ),
+				$c->get( Package_Repository::class )
+			)
+		);
+		$container->register(
+			\Aggressive\Ads\Portal\Inventory_Actions::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Inventory_Actions => new \Aggressive\Ads\Portal\Inventory_Actions( $c->get( \Aggressive\Ads\Workflow\Storefront_Request::class ) )
+		);
+		$container->register(
+			\Aggressive\Ads\Portal\Inventory_View_Data::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Inventory_View_Data => new \Aggressive\Ads\Portal\Inventory_View_Data(
+				$c->get( \Aggressive\Ads\Portal\Catalogue_View_Data::class ),
+				$c->get( Campaign_Editor::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Storefront_Request::class ),
+				$c->get( \Aggressive\Ads\Repository\Inventory_Availability_Repository::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+		$container->register(
 			Campaign_Report_View_Data::class,
 			static fn ( Service_Container $c ): Campaign_Report_View_Data => new Campaign_Report_View_Data(
 				$c->get( Campaign_Report_Repository::class ),

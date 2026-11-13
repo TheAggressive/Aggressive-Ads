@@ -28,21 +28,23 @@ use WP_Error;
  */
 final class Rate_Limiter {
 
-	public const ACTION_UPLOAD         = 'upload';
-	public const ACTION_TRANSITION     = 'transition';
-	public const ACTION_AUTOSAVE       = 'autosave';
-	public const ACTION_COPY           = 'copy';
-	public const ACTION_LINK_CHECK     = 'link_check';
-	public const ACTION_LOGIN          = 'login';
-	public const ACTION_SIGNUP         = 'signup';
-	public const ACTION_PASSWORD_RESET = 'password_reset';
-	public const ACTION_ORG_INVITE     = 'org_invite';
-	public const ACTION_EMAIL_CHANGE   = 'email_change';
-	public const ACTION_BEACON         = 'beacon';
-	public const ACTION_CLICK          = 'click';
-	public const ACTION_DECISIONS      = 'decisions';
-	public const ACTION_CONVERSION     = 'conversion';
-	public const ACTION_CONVERSION_S2S = 'conversion_s2s';
+	public const ACTION_UPLOAD          = 'upload';
+	public const ACTION_TRANSITION      = 'transition';
+	public const ACTION_AUTOSAVE        = 'autosave';
+	public const ACTION_COPY            = 'copy';
+	public const ACTION_CAMPAIGN_CREATE = 'campaign_create';
+	public const ACTION_INVENTORY       = 'inventory';
+	public const ACTION_LINK_CHECK      = 'link_check';
+	public const ACTION_LOGIN           = 'login';
+	public const ACTION_SIGNUP          = 'signup';
+	public const ACTION_PASSWORD_RESET  = 'password_reset';
+	public const ACTION_ORG_INVITE      = 'org_invite';
+	public const ACTION_EMAIL_CHANGE    = 'email_change';
+	public const ACTION_BEACON          = 'beacon';
+	public const ACTION_CLICK           = 'click';
+	public const ACTION_DECISIONS       = 'decisions';
+	public const ACTION_CONVERSION      = 'conversion';
+	public const ACTION_CONVERSION_S2S  = 'conversion_s2s';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -50,19 +52,27 @@ final class Rate_Limiter {
 	 * @var array<string, array{limit: int, window: int}>
 	 */
 	private const LIMITS = array(
-		self::ACTION_UPLOAD         => array(
-			'limit'  => 30,
-			'window' => HOUR_IN_SECONDS,
-		),
-		self::ACTION_TRANSITION     => array(
+		self::ACTION_CAMPAIGN_CREATE => array(
 			'limit'  => 20,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_AUTOSAVE       => array(
+		self::ACTION_INVENTORY       => array(
 			'limit'  => 120,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_COPY           => array(
+		self::ACTION_UPLOAD          => array(
+			'limit'  => 30,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_TRANSITION      => array(
+			'limit'  => 20,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_AUTOSAVE        => array(
+			'limit'  => 120,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_COPY            => array(
 			'limit'  => 20,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -74,7 +84,7 @@ final class Rate_Limiter {
 		 * handful of campaigns one person edits in a sitting; far short of
 		 * useful for anyone wanting a request engine.
 		 */
-		self::ACTION_LINK_CHECK     => array(
+		self::ACTION_LINK_CHECK      => array(
 			'limit'  => 30,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -85,23 +95,23 @@ final class Rate_Limiter {
 		 * password on a shared office connection is never locked out, tight
 		 * enough that credential stuffing is not worth the round trips.
 		 */
-		self::ACTION_LOGIN          => array(
+		self::ACTION_LOGIN           => array(
 			'limit'  => 20,
 			'window' => 15 * MINUTE_IN_SECONDS,
 		),
-		self::ACTION_SIGNUP         => array(
+		self::ACTION_SIGNUP          => array(
 			'limit'  => 5,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_PASSWORD_RESET => array(
+		self::ACTION_PASSWORD_RESET  => array(
 			'limit'  => 5,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_ORG_INVITE     => array(
+		self::ACTION_ORG_INVITE      => array(
 			'limit'  => 20,
 			'window' => DAY_IN_SECONDS,
 		),
-		self::ACTION_EMAIL_CHANGE   => array(
+		self::ACTION_EMAIL_CHANGE    => array(
 			'limit'  => 5,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -110,7 +120,7 @@ final class Rate_Limiter {
 		 * Counted per client. Fill GET is cached and high-volume, so it is
 		 * not limited. Beacon and click writes are.
 		 */
-		self::ACTION_BEACON         => array(
+		self::ACTION_BEACON          => array(
 
 			/*
 			 * Two per fill since viewability: the delivery and the view. The
@@ -130,11 +140,11 @@ final class Rate_Limiter {
 		 * that. The point is bounding the amplification an unauthenticated POST
 		 * can buy, not policing ordinary browsing.
 		 */
-		self::ACTION_DECISIONS      => array(
+		self::ACTION_DECISIONS       => array(
 			'limit'  => 300,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_CLICK          => array(
+		self::ACTION_CLICK           => array(
 			'limit'  => 120,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -150,7 +160,7 @@ final class Rate_Limiter {
 		 * what an unauthenticated POST can buy and still far past anything a
 		 * real shopper produces.
 		 */
-		self::ACTION_CONVERSION     => array(
+		self::ACTION_CONVERSION      => array(
 			'limit'  => 60,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -168,7 +178,7 @@ final class Rate_Limiter {
 		 * bounded — a credential that has started reporting a conversion a
 		 * second is either broken or compromised, and both are worth stopping.
 		 */
-		self::ACTION_CONVERSION_S2S => array(
+		self::ACTION_CONVERSION_S2S  => array(
 			'limit'  => 3000,
 			'window' => HOUR_IN_SECONDS,
 		),

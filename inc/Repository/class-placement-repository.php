@@ -183,6 +183,26 @@ final class Placement_Repository {
 	}
 
 	/**
+	 * A catalogue example must be public media, never an advertiser's creative.
+	 *
+	 * @param int $placement_id Placement id.
+	 */
+	public function public_house_image_url( int $placement_id ): string {
+		$id   = $this->house_attachment_id( $placement_id );
+		$post = get_post( $id );
+		if ( $id <= 0 || ! $post instanceof \WP_Post || 'attachment' !== $post->post_type || ! Upload_Rules::is_allowed_mime( $post->post_mime_type ) || 'publish' !== get_post_status( $post ) || (int) get_post_meta( $id, Creative_Repository::META_IS_CREATIVE, true ) > 0 ) {
+			return '';
+		}
+		if ( $post->post_parent > 0 ) {
+			$parent = get_post( $post->post_parent );
+			if ( ! $parent instanceof \WP_Post || ! is_post_publicly_viewable( $parent ) || '' !== $parent->post_password ) {
+				return '';
+			}
+		}
+		return $this->house_image_url( $placement_id );
+	}
+
+	/**
 	 * Whether this placement's house advertisement stays in the same tab.
 	 *
 	 * **Only a house advertisement gets this choice.** A paid creative always

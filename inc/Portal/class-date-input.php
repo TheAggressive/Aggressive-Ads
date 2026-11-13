@@ -47,7 +47,10 @@ final class Date_Input {
 			return 0;
 		}
 
-		$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $value, wp_timezone() );
+		// Reject control bytes before PHP's date parser, which throws on embedded NULs.
+		$date = 1 === preg_match( '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z/', $value )
+			? DateTimeImmutable::createFromFormat( '!Y-m-d', $value, wp_timezone() )
+			: false;
 
 		/*
 		 * The round-trip comparison is what rejects "2026-02-31": PHP rolls it

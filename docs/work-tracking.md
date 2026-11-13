@@ -91,7 +91,8 @@ publisher platform without duplicating P17–P34:
 
 - #279 scheduled white-label advertiser reports (complete; operating contract in
   [scheduled advertiser reports](scheduled-advertiser-reports.md));
-- #280 advertiser inventory storefront and booking;
+- #280 advertiser inventory storefront and requests (complete; reservations
+  remain staff-managed, as described in the [storefront contract](advertiser-inventory-storefront.md));
 - #281 reusable campaign templates / sales-product presets;
 - #282 proposal, quote and insertion-order workflow;
 - #283 publisher sales and revenue dashboard;
@@ -103,27 +104,26 @@ publisher platform without duplicating P17–P34:
 
 ## Recommended execution order
 
-Issue numbers are identifiers, not priority. The current dependency order is:
+The near-term competitive work (#279 and #280) is complete. Issue numbers are
+identifiers, not priority. The remaining dependency order is:
 
-1. Near-term competitive value with foundations already present: #280. Scheduled
-   advertiser reports (#279) are complete.
-2. P18 rich creatives: #262.
-3. P19 billing/commercial domain: #263.
-4. Commercial product layer: #281 and #282.
-5. P20 publisher workflow: #264.
-6. Sales operations: #283 and #284.
-7. P21 RBAC: #265.
-8. P22 API/service accounts: #266.
-9. P23 webhooks: #267.
-10. CRM boundary: #285.
-11. P27 privacy/consent: #271 before new identifier-dependent provider work.
-12. Cross-channel model: #286.
-13. Newsletter and sponsored-content channels: #287 and #288.
-14. Provider/programmatic/supply chain: #268 → #269 → #270.
-15. Traffic quality: #272.
-16. Scale/ingestion/observability/performance: #273 → #274 → #275 → #276.
-17. P33 accessibility (#277) remains an active gate throughout all UI work.
-18. P34 intelligence (#278) begins only after the data/privacy/audit model is
+1. P18 rich creatives: #262.
+2. P19 billing/commercial domain: #263.
+3. Commercial product layer: #281 and #282.
+4. P20 publisher workflow: #264.
+5. Sales operations: #283 and #284.
+6. P21 RBAC: #265.
+7. P22 API/service accounts: #266.
+8. P23 webhooks: #267.
+9. CRM boundary: #285.
+10. P27 privacy/consent: #271 before new identifier-dependent provider work.
+11. Cross-channel model: #286.
+12. Newsletter and sponsored-content channels: #287 and #288.
+13. Provider/programmatic/supply chain: #268 → #269 → #270.
+14. Traffic quality: #272.
+15. Scale/ingestion/observability/performance: #273 → #274 → #275 → #276.
+16. P33 accessibility (#277) remains an active gate throughout all UI work.
+17. P34 intelligence (#278) begins only after the data/privacy/audit model is
     mature enough to constrain and evaluate suggestions.
 
 Independent work may run in parallel when it does not share an unresolved

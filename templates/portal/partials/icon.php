@@ -2,9 +2,7 @@
 /**
  * One navigation icon.
  *
- * Literal inline SVG rather than an icon font or a sprite request: the rail is
- * above the fold on every screen, five icons is less markup than one HTTP
- * request, and an icon font renders as a random glyph while it loads.
+ * The rail uses the existing inline SVG set without another asset request.
  *
  * Every icon is aria-hidden. The label beside it is the accessible name; a
  * decorative shape announcing itself twice is worse than not announcing at all.
@@ -74,6 +72,7 @@ $aggr_icon = isset( $aggr_icon ) && is_string( $aggr_icon ) ? $aggr_icon : '';
 		 * `src/admin/shared/icon.tsx` draws the React screens' icons to the
 		 * same geometry.
 		 */
+		case 'inventory':
 		case 'page':
 			?>
 			<rect x="4" y="3" width="16" height="18" rx="2" />

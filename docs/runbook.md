@@ -154,6 +154,16 @@ wp cron event run aggr_reconcile_campaigns
 
 ---
 
+### Advertiser inventory requests
+
+Advertiser inventory requests follow the
+[storefront operating contract](advertiser-inventory-storefront.md). Limited
+availability requires staff confirmation; it is not a reservation or a capacity
+quote. SQL check failures are displayed separately. A failed draft save retains
+the created campaign for recovery through its editor. Restoring older code does
+not require dropping tables or lowering a schema marker; this flow adds no
+schema migration or automatic reservation writer.
+
 ### Scheduled report recovery
 
 Campaign goal summaries use schema 34 indexes on the existing line-item and
