@@ -354,3 +354,21 @@ actual dashboard scope/escaping attachment, and failure/recovery.
 `CampaignReportIndexesTest` proves failed DDL does not commit migration progress.
 The durable read limits and current-versus-period semantics live in the
 [campaign summary contract](campaign-report-summaries.md).
+
+## Advertiser inventory requests
+
+Inventory is authenticated shared catalogue data, not a public forecast API.
+The view returns only a derived availability label. Capacity, forecast versions,
+confidence, error and other organizations' reservation records never enter HTML
+or URLs. Read limits apply before aggregation, and failed SQL cannot become an
+available or sold-out answer. Public examples exclude creative-marked and private
+attachments, even if a placement references one.
+
+The signed request checks capabilities and a nonce independently. The existing
+campaign writer resolves current membership, snapshots the selected package and
+uses its shared per-user creation limit across delivery entry points. Posted
+tenant, price and availability fields cannot choose ownership or authorize a
+hold. No advertiser reservation write or oversell override is added.
+
+`InventoryStorefrontTest`, `InventoryReadScaleTest` and the multisite reader test
+cover these boundaries. See [storefront limits and recovery](advertiser-inventory-storefront.md).

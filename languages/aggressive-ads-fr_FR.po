@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-13T06:17:20+00:00\n"
+"POT-Creation-Date: 2026-11-13T11:38:12+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -992,6 +992,7 @@ msgstr ""
 #: inc/Admin/class-package-screen.php:92 inc/Admin/class-package-screen.php:93
 #: inc/Admin/class-package-screen.php:125
 #: inc/Admin/class-package-screen.php:190 inc/Core/class-post-types.php:200
+#: templates/portal/screens/inventory.php:103
 msgid "Packages"
 msgstr ""
 
@@ -1138,7 +1139,7 @@ msgstr ""
 #. translators: 1: a time of day, e.g. 12:00 AM. 2: the site's timezone for that day, e.g. PDT.
 #: inc/Admin/class-pending-work.php:147
 #: inc/Portal/class-campaign-report-view-data.php:174
-#: inc/Portal/class-date-input.php:88
+#: inc/Portal/class-date-input.php:91
 #, php-format
 msgid "%1$s %2$s"
 msgstr ""
@@ -1462,6 +1463,8 @@ msgstr ""
 #: inc/Portal/class-campaign-actions.php:907
 #: inc/Portal/class-creative-actions.php:704
 #: inc/Portal/class-email-change-actions.php:178
+#: inc/Portal/class-inventory-actions.php:42
+#: inc/Portal/class-inventory-view-data.php:51
 #: inc/Portal/class-organization-actions.php:222
 #: inc/Portal/class-report-actions.php:81
 #: inc/Portal/class-report-preference-actions.php:47
@@ -1744,7 +1747,7 @@ msgstr ""
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
 #: inc/Admin/class-review-data.php:321
 #: inc/Portal/class-campaign-list-view-data.php:315
-#: inc/Workflow/class-campaign-editor.php:713
+#: inc/Workflow/class-campaign-editor.php:720
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -1975,7 +1978,7 @@ msgid "Pacing"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:320 inc/Core/class-post-types.php:198
-#: templates/portal/organization.php:15 templates/portal/partials/rail.php:35
+#: templates/portal/organization.php:15 templates/portal/partials/rail.php:36
 #: templates/portal/screens/account.php:143
 #: templates/portal/screens/account.php:227
 #: templates/portal/screens/organization.php:29
@@ -3389,6 +3392,7 @@ msgstr[1] ""
 #: templates/portal/partials/campaign-order-summary.php:134
 #: templates/portal/partials/campaign-review-step.php:108
 #: templates/portal/partials/campaign-status.php:225
+#: templates/portal/screens/inventory.php:46
 msgid "Package"
 msgstr ""
 
@@ -4207,7 +4211,8 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:525
 #: inc/Workflow/class-campaign-copier.php:65
-#: inc/Workflow/class-campaign-editor.php:90
+#: inc/Workflow/class-campaign-editor.php:93
+#: inc/Workflow/class-storefront-request.php:37
 msgid "You do not have permission to create a campaign."
 msgstr ""
 
@@ -4215,7 +4220,7 @@ msgstr ""
 #: inc/Portal/class-campaign-actions.php:580
 #: inc/Portal/class-campaign-actions.php:632
 #: inc/Portal/class-campaign-actions.php:648
-#: inc/Workflow/class-campaign-editor.php:351
+#: inc/Workflow/class-campaign-editor.php:358
 msgid "You do not have permission to edit that campaign."
 msgstr ""
 
@@ -4235,13 +4240,13 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:816
 #: inc/Portal/class-campaign-change-form.php:121
-#: inc/Workflow/class-campaign-editor.php:375
+#: inc/Workflow/class-campaign-editor.php:382
 msgid "Enter a campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:817
-#: inc/Workflow/class-campaign-editor.php:148
-#: inc/Workflow/class-campaign-editor.php:379
+#: inc/Workflow/class-campaign-editor.php:151
+#: inc/Workflow/class-campaign-editor.php:386
 msgid "Use 160 characters or fewer for the campaign name."
 msgstr ""
 
@@ -4253,7 +4258,7 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:819
 #: inc/Portal/class-campaign-change-form.php:126
-#: inc/Workflow/class-campaign-editor.php:448
+#: inc/Workflow/class-campaign-editor.php:455
 #: inc/Workflow/class-campaign-validator.php:239
 msgid "The end date must be after the start date."
 msgstr ""
@@ -4278,7 +4283,8 @@ msgstr ""
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:825 inc/Portal/class-date-input.php:60
+#: inc/Portal/class-campaign-actions.php:825 inc/Portal/class-date-input.php:63
+#: inc/Portal/class-inventory-input.php:31
 msgid "Enter a valid date in the required format."
 msgstr ""
 
@@ -4287,11 +4293,14 @@ msgid "One of the selected placements is no longer available."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:827
+#: inc/Portal/class-inventory-input.php:25
+#: inc/Workflow/class-storefront-request.php:40
 msgid "Choose a package."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:828
 #: inc/Portal/class-campaign-change-form.php:133
+#: inc/Portal/class-inventory-view-data.php:95
 msgid "That package is no longer available. Choose another package."
 msgstr ""
 
@@ -4302,8 +4311,8 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:830
-#: inc/Workflow/class-campaign-editor.php:567
-#: inc/Workflow/class-campaign-editor.php:572
+#: inc/Workflow/class-campaign-editor.php:574
+#: inc/Workflow/class-campaign-editor.php:579
 msgid "Add an ad for every size in the package before continuing."
 msgstr ""
 
@@ -4321,12 +4330,12 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:833
-#: inc/Workflow/class-campaign-editor.php:97
+#: inc/Workflow/class-campaign-editor.php:100
 msgid "Your account is not connected to an organization."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:834
-#: inc/Workflow/class-campaign-editor.php:142
+#: inc/Workflow/class-campaign-editor.php:145
 msgid "This organization cannot create campaigns. Please get in touch."
 msgstr ""
 
@@ -4386,7 +4395,7 @@ msgid "There is no request to withdraw."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:847
-#: inc/Workflow/class-campaign-editor.php:256
+#: inc/Workflow/class-campaign-editor.php:263
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
 
@@ -4419,7 +4428,7 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-change-form.php:129
-#: inc/Workflow/class-campaign-editor.php:470
+#: inc/Workflow/class-campaign-editor.php:477
 msgid "Enter a valid http or https link, such as https://example.com."
 msgstr ""
 
@@ -4963,7 +4972,7 @@ msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:294
 #: inc/Workflow/class-assignment-editor.php:226
-#: inc/Workflow/class-campaign-editor.php:355
+#: inc/Workflow/class-campaign-editor.php:362
 #: inc/Workflow/class-creative-manager.php:428
 #: inc/Workflow/class-creative-manager.php:577
 #: inc/Workflow/class-creative-manager.php:654
@@ -5099,11 +5108,11 @@ msgstr ""
 msgid "Changes needed"
 msgstr ""
 
-#: inc/Portal/class-date-input.php:89
+#: inc/Portal/class-date-input.php:92
 msgid "11:59 PM"
 msgstr ""
 
-#: inc/Portal/class-date-input.php:89
+#: inc/Portal/class-date-input.php:92
 msgid "12:00 AM"
 msgstr ""
 
@@ -5221,6 +5230,18 @@ msgstr ""
 #: inc/Workflow/class-email-change.php:192
 msgid "Your email address could not be updated."
 msgstr ""
+
+#: inc/Portal/class-inventory-view-data.php:122
+msgid "Available to request"
+msgstr "Disponible sur demande"
+
+#: inc/Portal/class-inventory-view-data.php:123
+msgid "Unavailable for these dates"
+msgstr "Indisponible à ces dates"
+
+#: inc/Portal/class-inventory-view-data.php:124
+msgid "Limited — confirm with the publisher"
+msgstr "Limitée — à confirmer auprès de l’éditeur"
 
 #: inc/Portal/class-login-actions.php:197
 msgid "Too many sign-in attempts. Please wait a few minutes and try again."
@@ -5446,6 +5467,13 @@ msgstr ""
 msgid "Campaign summaries could not be loaded. Please try again."
 msgstr "Impossible de charger les résumés des campagnes. Veuillez réessayer."
 
+#: inc/Repository/class-inventory-availability-repository.php:122
+msgid ""
+"Availability could not be checked. Please try again or ask the publisher."
+msgstr ""
+"Impossible de vérifier la disponibilité. Veuillez réessayer ou contacter "
+"l’éditeur."
+
 #: inc/Repository/class-org-access-repository.php:104
 #: inc/Repository/class-org-access-repository.php:181
 #: inc/Repository/class-org-repository.php:222
@@ -5526,7 +5554,7 @@ msgid "That impression could not be recorded. Please try again."
 msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:344
-#: inc/Workflow/class-campaign-editor.php:124
+#: inc/Workflow/class-campaign-editor.php:127
 msgid "That advertiser could not be found."
 msgstr ""
 
@@ -5881,11 +5909,11 @@ msgstr ""
 msgid "Security"
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:232
+#: inc/Security/class-rate-limiter.php:242
 msgid "This request could not be safely accepted. Please try again."
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:255
+#: inc/Security/class-rate-limiter.php:265
 msgid ""
 "That is more requests than we can accept right now. Please wait a moment and "
 "try again."
@@ -6095,13 +6123,16 @@ msgstr ""
 msgid "There are no requested changes to withdraw."
 msgstr ""
 
+#. translators: %s: site timezone.
 #: inc/Workflow/class-campaign-change-summary.php:77
 #: templates/portal/partials/campaign-schedule-fields.php:37
+#: templates/portal/screens/inventory.php:53
 msgid "Start date"
 msgstr ""
 
 #: inc/Workflow/class-campaign-change-summary.php:79
 #: templates/portal/partials/campaign-schedule-fields.php:69
+#: templates/portal/screens/inventory.php:55
 msgid "End date"
 msgstr ""
 
@@ -6110,46 +6141,46 @@ msgid "Open-ended"
 msgstr ""
 
 #: inc/Workflow/class-campaign-copier.php:255
-#: inc/Workflow/class-campaign-editor.php:154
+#: inc/Workflow/class-campaign-editor.php:161
 msgid "Untitled campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:117
+#: inc/Workflow/class-campaign-editor.php:120
 msgid "You do not have permission to create a campaign for an advertiser."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:167
+#: inc/Workflow/class-campaign-editor.php:174
 msgid "The campaign could not be created. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:173
+#: inc/Workflow/class-campaign-editor.php:180
 msgid "The campaign delivery strategy could not be created. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:213
-#: inc/Workflow/class-campaign-editor.php:233
+#: inc/Workflow/class-campaign-editor.php:220
+#: inc/Workflow/class-campaign-editor.php:240
 msgid "This campaign changed in another window. Reload it before saving again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:390
+#: inc/Workflow/class-campaign-editor.php:397
 msgid "One of the selected placements is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:495
+#: inc/Workflow/class-campaign-editor.php:502
 msgid "That campaign step is not valid."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:664
+#: inc/Workflow/class-campaign-editor.php:671
 msgid "That package is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:675
+#: inc/Workflow/class-campaign-editor.php:682
 msgid ""
 "That package is not configured completely. Please choose another package or "
 "get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:680
+#: inc/Workflow/class-campaign-editor.php:687
 msgid ""
 "That package includes a placement that is not available. Please choose "
 "another package or get in touch."
@@ -6873,7 +6904,7 @@ msgstr ""
 
 #: templates/portal/account.php:15
 #: templates/portal/partials/campaign-review-step.php:174
-#: templates/portal/partials/rail.php:36
+#: templates/portal/partials/rail.php:37
 #: templates/portal/screens/account.php:35
 msgid "Account"
 msgstr ""
@@ -6911,10 +6942,15 @@ msgstr ""
 msgid "Reset your password"
 msgstr ""
 
-#: templates/portal/help.php:15 templates/portal/partials/rail.php:37
+#: templates/portal/help.php:15 templates/portal/partials/rail.php:38
 #: templates/portal/screens/help.php:40
 msgid "Help"
 msgstr ""
+
+#: templates/portal/inventory.php:15 templates/portal/partials/rail.php:35
+#: templates/portal/screens/inventory.php:24
+msgid "Inventory"
+msgstr "Inventaire"
 
 #: templates/portal/login.php:15 templates/portal/screens/login.php:34
 #: templates/portal/screens/login.php:65
@@ -7668,6 +7704,7 @@ msgid ""
 msgstr ""
 
 #: templates/portal/partials/campaign-plan-step.php:92
+#: templates/portal/screens/inventory.php:31
 msgid "No packages are available"
 msgstr ""
 
@@ -8394,23 +8431,23 @@ msgstr ""
 msgid "Add tags to link"
 msgstr ""
 
-#: templates/portal/partials/rail.php:46
+#: templates/portal/partials/rail.php:47
 msgid "Advertising portal"
 msgstr ""
 
-#: templates/portal/partials/rail.php:61
+#: templates/portal/partials/rail.php:62
 msgid "Acting for"
 msgstr ""
 
-#: templates/portal/partials/rail.php:69
+#: templates/portal/partials/rail.php:70
 msgid "Stop acting"
 msgstr ""
 
-#: templates/portal/partials/rail.php:75
+#: templates/portal/partials/rail.php:76
 msgid "Portal"
 msgstr ""
 
-#: templates/portal/partials/rail.php:115
+#: templates/portal/partials/rail.php:116
 #: templates/portal/screens/campaign.php:218
 #: templates/portal/screens/campaigns.php:107
 #: templates/portal/screens/dashboard.php:80
@@ -8988,6 +9025,10 @@ msgstr ""
 msgid "Pick a package. Dates and ads come next."
 msgstr ""
 
+#: templates/portal/screens/dashboard.php:188
+msgid "Browse inventory and check dates"
+msgstr "Parcourir l’inventaire et vérifier les dates"
+
 #: templates/portal/screens/forgot-password.php:57
 #: templates/portal/screens/login.php:51
 #: templates/portal/screens/organization.php:317
@@ -9126,6 +9167,89 @@ msgstr ""
 #: templates/portal/screens/help.php:167
 msgid "Email us and we will help."
 msgstr ""
+
+#: templates/portal/screens/inventory.php:25
+msgid "Browse advertising"
+msgstr "Parcourir les offres publicitaires"
+
+#: templates/portal/screens/inventory.php:26
+msgid "Choose a package and dates, then prepare a campaign request for review."
+msgstr ""
+"Choisissez un forfait et des dates, puis préparez une demande de campagne à "
+"examiner."
+
+#: templates/portal/screens/inventory.php:32
+msgid "Please get in touch with the publisher to discuss advertising."
+msgstr "Veuillez contacter l’éditeur pour discuter de publicité."
+
+#: templates/portal/screens/inventory.php:35
+msgid "Check your dates"
+msgstr "Vérifiez vos dates"
+
+#: templates/portal/screens/inventory.php:38
+msgid ""
+"Your request could not be started. Check the package and dates, or try again "
+"later."
+msgstr ""
+"Impossible de démarrer votre demande. Vérifiez le forfait et les dates, ou "
+"réessayez plus tard."
+
+#. translators: %s: site timezone.
+#: templates/portal/screens/inventory.php:52
+#, php-format
+msgid ""
+"Dates use %s. Fixed packages calculate their own end date; custom packages "
+"require an end date."
+msgstr ""
+"Les dates utilisent %s. Les forfaits à durée fixe calculent leur date de "
+"fin ; les forfaits personnalisés nécessitent une date de fin."
+
+#: templates/portal/screens/inventory.php:57
+msgid "Check availability"
+msgstr "Vérifier la disponibilité"
+
+#: templates/portal/screens/inventory.php:67
+msgid ""
+"Availability is advisory and can change. Limited means the publisher needs "
+"to confirm these dates. A request does not hold inventory; reservations are "
+"arranged by staff."
+msgstr ""
+"La disponibilité est indicative et peut changer. Limitée signifie que "
+"l’éditeur doit confirmer ces dates. Une demande ne bloque pas d’inventaire ; "
+"l’équipe gère les réservations."
+
+#: templates/portal/screens/inventory.php:68
+msgid ""
+"You can ask the publisher to review a request even when availability needs "
+"confirmation. No impression volume or reach is promised here."
+msgstr ""
+"Vous pouvez demander à l’éditeur d’examiner une demande même si la "
+"disponibilité reste à confirmer. Aucun volume d’impressions ni aucune portée "
+"ne sont promis ici."
+
+#: templates/portal/screens/inventory.php:75
+msgid "Prepare campaign request"
+msgstr "Préparer une demande de campagne"
+
+#: templates/portal/screens/inventory.php:82
+msgid "Placement examples and requirements"
+msgstr "Exemples et exigences des emplacements"
+
+#. translators: %s: supported image formats.
+#: templates/portal/screens/inventory.php:83
+#, php-format
+msgid "Supported image formats: %s."
+msgstr "Formats d’image acceptés : %s."
+
+#: templates/portal/screens/inventory.php:95
+msgid "Publisher example"
+msgstr "Exemple de l’éditeur"
+
+#. translators: %s: package name.
+#: templates/portal/screens/inventory.php:124
+#, php-format
+msgid "Choose %s"
+msgstr "Choisir %s"
 
 #: templates/portal/screens/login.php:62
 msgid "Keep me signed in"

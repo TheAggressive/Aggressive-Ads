@@ -25,6 +25,7 @@
 @import './layout/_chrome.css';
 @import './layout/_rail-foot.css';
 @import './layout/_dashboard.css';
+@import './layout/_inventory.css';
 @import './layout/_lists.css';
 @import './layout/_pages.css';
 @import './components/_surfaces.css';

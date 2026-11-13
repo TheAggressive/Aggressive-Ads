@@ -1,0 +1,23 @@
+.aggr-inventory-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+	gap: var(--aggr-space-md);
+	margin-block-end: var(--aggr-space-lg);
+}
+
+.aggr-inventory-grid > article {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.aggr-inventory-example {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+.aggr-inventory-result {
+	margin-block-start: var(--aggr-space-lg);
+	border-block-start: 1px solid var(--aggr-border-color);
+	padding-block-start: var(--aggr-space-md);
+}

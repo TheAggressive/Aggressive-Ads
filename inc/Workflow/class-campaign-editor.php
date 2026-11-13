@@ -21,6 +21,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 
@@ -64,6 +65,7 @@ final class Campaign_Editor {
 	 * @param Audit_Repository          $audit      Audit persistence.
 	 * @param Edit_Window               $window     When editing is permitted.
 	 * @param Fill_Cache                $cache      Native fill cache.
+	 * @param Rate_Limiter              $limiter    Shared draft creation budget.
 	 * @param Line_Item_Repository|null $line_items Line-item compatibility persistence.
 	 */
 	public function __construct(
@@ -75,6 +77,7 @@ final class Campaign_Editor {
 		private readonly Audit_Repository $audit,
 		private readonly Edit_Window $window,
 		private readonly Fill_Cache $cache,
+		private readonly Rate_Limiter $limiter,
 		private readonly ?Line_Item_Repository $line_items = null
 	) {
 	}
@@ -148,6 +151,10 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ), 422, 'title' );
 		}
 
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_CAMPAIGN_CREATE, $user_id );
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
 		$placeholder = '' === $title;
 
 		if ( $placeholder ) {

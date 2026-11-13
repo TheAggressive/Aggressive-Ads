@@ -27,6 +27,7 @@ final class Request {
 
 	public const ROUTE_DASHBOARD    = 'dashboard';
 	public const ROUTE_CAMPAIGNS    = 'campaigns';
+	public const ROUTE_INVENTORY    = 'inventory';
 	public const ROUTE_ORGANIZATION = 'organization';
 	public const ROUTE_ACCOUNT      = 'account';
 	public const ROUTE_HELP         = 'help';
@@ -69,6 +70,7 @@ final class Request {
 		return array(
 			self::ROUTE_DASHBOARD,
 			self::ROUTE_CAMPAIGNS,
+			self::ROUTE_INVENTORY,
 			self::ROUTE_ORGANIZATION,
 			self::ROUTE_ACCOUNT,
 			self::ROUTE_HELP,

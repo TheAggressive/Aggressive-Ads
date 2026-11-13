@@ -394,6 +394,7 @@ final class Plugin {
 			Assets::class,
 			Brand_Styles::class,
 			Campaign_Actions::class,
+			\Aggressive\Ads\Portal\Inventory_Actions::class,
 			Acting_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,

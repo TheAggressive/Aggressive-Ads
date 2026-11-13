@@ -32,6 +32,7 @@ $aggr_host    = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 $aggr_items = array(
 	Request::ROUTE_DASHBOARD    => __( 'Dashboard', 'aggressive-ads' ),
 	Request::ROUTE_CAMPAIGNS    => __( 'Campaigns', 'aggressive-ads' ),
+	Request::ROUTE_INVENTORY    => __( 'Inventory', 'aggressive-ads' ),
 	Request::ROUTE_ORGANIZATION => __( 'Organization', 'aggressive-ads' ),
 	Request::ROUTE_ACCOUNT      => __( 'Account', 'aggressive-ads' ),
 	Request::ROUTE_HELP         => __( 'Help', 'aggressive-ads' ),

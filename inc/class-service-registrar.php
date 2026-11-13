@@ -519,6 +519,7 @@ final class Service_Registrar {
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class ),
 				$c->get( Fill_Cache::class ),
+				$c->get( Rate_Limiter::class ),
 				$c->get( Line_Item_Repository::class )
 			)
 		);
