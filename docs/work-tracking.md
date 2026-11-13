@@ -89,7 +89,8 @@ operations and documentation as applicable.
 #258 is the umbrella for product capabilities that strengthen the direct-sales
 publisher platform without duplicating P17–P34:
 
-- #279 scheduled white-label advertiser reports;
+- #279 scheduled white-label advertiser reports (complete; operating contract in
+  [scheduled advertiser reports](scheduled-advertiser-reports.md));
 - #280 advertiser inventory storefront and booking;
 - #281 reusable campaign templates / sales-product presets;
 - #282 proposal, quote and insertion-order workflow;
@@ -104,7 +105,8 @@ publisher platform without duplicating P17–P34:
 
 Issue numbers are identifiers, not priority. The current dependency order is:
 
-1. Near-term competitive value with foundations already present: #279 and #280.
+1. Near-term competitive value with foundations already present: #280. Scheduled
+   advertiser reports (#279) are complete.
 2. P18 rich creatives: #262.
 3. P19 billing/commercial domain: #263.
 4. Commercial product layer: #281 and #282.

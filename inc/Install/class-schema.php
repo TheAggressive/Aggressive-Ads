@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 33;
+	public const DB_VERSION = 34;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -125,6 +125,7 @@ final class Schema {
 	UNIQUE KEY campaign_default (campaign_id,default_key),
 	KEY campaign_status (campaign_id,status,id),
 	KEY organization_status (organization_id,status,id),
+	KEY organization_report (organization_id,id),
 	KEY delivery_window (status,start_at_ts,end_at_ts,id)
 ) {$charset_collate};";
 	}
@@ -365,7 +366,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function line_items_index_names(): array {
-		return array( 'PRIMARY', 'campaign_default', 'campaign_status', 'organization_status', 'delivery_window' );
+		return array( 'PRIMARY', 'campaign_default', 'campaign_status', 'organization_status', 'organization_report', 'delivery_window' );
 	}
 
 	/**
@@ -654,6 +655,7 @@ final class Schema {
 	KEY campaign_day (campaign_id,day_utc),
 	KEY line_item_day (line_item_id,day_utc),
 	KEY org_day (org_id,day_utc),
+	KEY org_campaign_line_day (org_id,campaign_id,line_item_id,day_utc),
 	KEY creative_day (creative_id,day_utc),
 	KEY day (day_utc)
 ) {$charset_collate};";
@@ -687,7 +689,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_creative_day', 'campaign_day', 'line_item_day', 'org_day', 'creative_day', 'day' );
+		return array( 'PRIMARY', 'slot_creative_day', 'campaign_day', 'line_item_day', 'org_day', 'org_campaign_line_day', 'creative_day', 'day' );
 	}
 
 	/**

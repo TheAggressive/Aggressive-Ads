@@ -72,6 +72,7 @@ final class ReportSubscriptionSchemaTest extends WP_UnitTestCase {
 		try {
 			$repo->drop_table();
 			$this->assertFalse( $repo->table_exists() );
+			$this->assertFalse( get_option( \Aggressive\Ads\Install\Installer::OPTION_UPGRADE_LOCK, false ), 'The CREATE refusal must be reached rather than skipped under a leftover lock.' );
 			update_option( \Aggressive\Ads\Install\Installer::OPTION_DB_VERSION, 32, true );
 			$upgrader = Plugin::instance()->container()->get( \Aggressive\Ads\Install\Upgrader::class );
 			add_filter( 'query', $fail );
@@ -84,10 +85,13 @@ final class ReportSubscriptionSchemaTest extends WP_UnitTestCase {
 			$this->assertFalse( $repo->table_exists() );
 			$upgrader->maybe_upgrade();
 			$this->assertTrue( $repo->table_exists() );
-			$this->assertSame( 33, \Aggressive\Ads\Install\Installer::stored_db_version() );
+			$this->assertSame( Schema::DB_VERSION, \Aggressive\Ads\Install\Installer::stored_db_version() );
 		} finally {
 			$repo->install_table();
 			update_option( \Aggressive\Ads\Install\Installer::OPTION_DB_VERSION, $original, true );
+			// CREATE commits an acquired lock; persist its release before WP_UnitTestCase rolls back later DML.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Complete cleanup after real DDL in the transactional test harness.
+			$wpdb->query( 'COMMIT' );
 			$wpdb->suppress_errors( $errors );
 			add_filter( 'query', array( $this, '_create_temporary_tables' ) );
 			add_filter( 'query', array( $this, '_drop_temporary_tables' ) );

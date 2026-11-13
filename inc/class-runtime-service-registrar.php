@@ -92,7 +92,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Settings::class ),
 				$c->get( \Aggressive\Ads\Workflow\Reporting_Read::class ),
 				$c->get( \Aggressive\Ads\Portal\Delivery_View_Data::class ),
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( \Aggressive\Ads\Portal\Campaign_Report_View_Data::class )
 			)
 		);
 		$container->register(

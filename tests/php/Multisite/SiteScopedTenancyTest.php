@@ -252,6 +252,85 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		}
 	}
 
+	/** Current report settings and counters cannot cross sites with identical ids. */
+	public function test_campaign_summary_reader_keeps_colliding_site_ids_separate(): void {
+		$this->network_activate();
+		$sites      = array( (int) self::factory()->blog->create(), (int) self::factory()->blog->create() );
+		$reader     = new \Aggressive\Ads\Repository\Campaign_Report_Repository();
+		$identities = array();
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $index, &$identities ): void {
+					$org      = (int) self::factory()->post->create(
+						array(
+							'post_type'   => Post_Types::ORGANIZATION,
+							'post_status' => 'publish',
+							'post_title'  => 'Site report organization',
+							'import_id'   => 45000,
+						)
+					);
+					$campaign = (int) self::factory()->post->create(
+						array(
+							'post_type'   => Post_Types::CAMPAIGN,
+							'post_status' => 'aggr_live',
+							'post_title'  => 'Site report ' . $index,
+							'import_id'   => 45001,
+						)
+					);
+					update_post_meta( $campaign, Campaign_Repository::META_ORG_ID, $org );
+					global $wpdb;
+					$items = new Line_Item_Repository( new Campaign_Repository() );
+					$this->assertSame( Post_Types::CAMPAIGN, get_post_type( $campaign ) );
+					// Core's temporary tables are omitted by SHOW TABLES; seed identity, then use the real settings writer.
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Physical per-site fixture, not a supplied report outcome.
+					$this->assertSame(
+						1,
+						$wpdb->insert(
+							$items->table_name(),
+							array(
+								'campaign_id'     => $campaign,
+								'organization_id' => $org,
+								'status'          => 'live',
+							)
+						)
+					);
+					$line_id = (int) $wpdb->insert_id;
+					$this->assertIsInt(
+						$items->update(
+							$line_id,
+							$campaign,
+							array(
+								'goal_type'   => 'impressions',
+								'goal_amount' => 100,
+							),
+							1
+						)
+					);
+					$identities[] = array( $org, $campaign, $line_id );
+					for ( $count = 0; $count <= $index; ++$count ) {
+						$this->assertTrue( ( new Rollup_Repository() )->increment( 'impressions', 1, $campaign, '2026-11-03', $line_id, $org ) );
+					}
+				}
+			);
+		}
+		$this->assertSame( $identities[0], $identities[1], 'The fixture must actually collide across publisher sites.' );
+		foreach ( $sites as $index => $site ) {
+			$this->on_site(
+				$site,
+				function () use ( $reader, $index, $identities ): void {
+					$page = $reader->page( $identities[ $index ][0] );
+					$this->assertIsArray( $page );
+					$this->assertCount( 1, $page['rows'] );
+					$this->assertSame( 'Site report ' . $index, $page['rows'][0]['campaign_name'] );
+					$totals = $reader->totals( $identities[ $index ][0], $page['rows'], null, strtotime( '2026-11-16 UTC' ) );
+					$this->assertIsArray( $totals );
+					$this->assertSame( $index + 1, $totals['totals'][ $identities[ $index ][2] ]['impressions'] );
+				}
+			);
+		}
+	}
+
 	/**
 	 * Network-activates this plugin. The test bootstrap loads it as an
 	 * mu-plugin, which is not the same as active_sitewide_plugins.

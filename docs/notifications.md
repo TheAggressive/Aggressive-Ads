@@ -140,4 +140,6 @@ formatting and freshness disclosures, with authenticated portal/CSV links. They
 have their own durable per-period retry state and do not reuse campaign reminder
 idempotence markers. See [scheduled advertiser report delivery](scheduled-advertiser-reports.md)
 and the [runbook recovery procedure](runbook.md#scheduled-report-recovery).
-Campaign goal/pacing summaries remain tracked in #279.
+Campaign goal/pacing summaries use the same portal presenter, with current
+settings and progress separated from selected-period counts. See the
+[campaign summary contract](campaign-report-summaries.md).

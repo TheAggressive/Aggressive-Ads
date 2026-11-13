@@ -107,8 +107,9 @@ bounded CSV export are built from rollups rather than raw event scans.
 
 The expanded measurement/reporting platform work is P10–P14 and is recorded in
 [platform-implementation-progress.md](platform-implementation-progress.md).
-Scheduled client delivery is now an explicit product issue (#279) rather than an
-implicit gap in this completed phase.
+Scheduled client delivery is implemented under #279 through #365 and #367. Its
+operational requirements are documented in
+[scheduled advertiser reports](scheduled-advertiser-reports.md).
 
 ## Phase 11 — Hardening and launch *(complete)*
 
@@ -162,12 +163,13 @@ rules:
 Capabilities previously described as merely “architected for” are now either
 sequenced platform phases or explicit product issues under #258.
 
+Completed: #279 scheduled white-label advertiser reports, including personal
+weekly/monthly delivery (#365) and shared campaign goal/pacing summaries (#367).
+See [delivery scope and operating requirements](scheduled-advertiser-reports.md).
+Expiring share links and presentation/PDF exports are optional follow-up work.
+
 Current product issues include:
 
-- #279 scheduled white-label advertiser reports: personal weekly/monthly
-  organization summaries implemented in #365; campaign goal/pacing summaries
-  and the remaining parent acceptance criteria stay open. See
-  [delivery scope](scheduled-advertiser-reports.md);
 - #280 advertiser inventory storefront/booking;
 - #281 campaign templates / reusable sales-product presets;
 - #282 proposal, quote and insertion-order workflow;

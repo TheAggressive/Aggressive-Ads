@@ -92,9 +92,13 @@ final class InstallerTest extends WP_UnitTestCase {
 		$this->assertSame( $declared_columns, $columns );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
-		$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
-		$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
-		$this->assertSame( Schema::line_items_index_names(), $indexes );
+		$rows             = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$indexes          = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+		$declared_indexes = Schema::line_items_index_names();
+		// An additive migration can change SHOW INDEX enumeration order, not the required index set.
+		sort( $indexes );
+		sort( $declared_indexes );
+		$this->assertSame( $declared_indexes, $indexes );
 	}
 
 	/** The organization access table has every declared column and index. */
@@ -146,6 +150,9 @@ final class InstallerTest extends WP_UnitTestCase {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
 			$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
 			$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+			// Compare the exact set for fresh and migrated tables; column order is checked by migration verification.
+			sort( $indexes );
+			sort( $declared_indexes );
 			$this->assertSame( $declared_indexes, $indexes );
 		}
 	}

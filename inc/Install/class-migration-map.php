@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
@@ -447,6 +448,12 @@ final class Migration_Map {
 			},
 			33 => static function (): void {
 				( new \Aggressive\Ads\Repository\Report_Subscription_Repository() )->install_table();
+			},
+			34 => static function () use ( $c ): void {
+				$c->get( Line_Item_Repository::class )->install_table();
+				$c->get( Rollup_Repository::class )->install_table();
+				$c->get( Report_Bucket_Repository::class )->install_table();
+				( new \Aggressive\Ads\Repository\Campaign_Report_Repository() )->verify_indexes();
 			},
 		);
 	}

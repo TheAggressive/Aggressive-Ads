@@ -121,6 +121,7 @@ $aggr_delivery_title  = __( 'Native delivery', 'aggressive-ads' );
 $aggr_export_campaign = 0;
 
 require AGGR_PLUGIN_DIR . 'templates/portal/partials/delivery-card.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-reports.php';
 ?>
 
 <?php

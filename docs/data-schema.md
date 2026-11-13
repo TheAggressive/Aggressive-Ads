@@ -681,3 +681,15 @@ compare-and-set state transitions. A persisted `sending` state after interruptio
 is uncertain, never automatically resent for that period. User/organization
 deletion removes their rows; deactivation preserves them; uninstall/site deletion
 drops the current site's table. See [delivery and recovery semantics](scheduled-advertiser-reports.md).
+
+## Campaign report indexes — schema 34
+
+Existing line-item, daily rollup and quarter-hour bucket tables gain
+`organization_report(organization_id,id)`,
+`org_campaign_line_day(org_id,campaign_id,line_item_id,day_utc)` and
+`org_campaign_line_bucket(org_id,campaign_id,line_item_id,bucket_utc)`. They
+support bounded keyset candidates and bounded projection inputs for shared
+campaign summaries. Migration 34 and fresh/repair installs verify exact index
+column order before stamping progress; a failed build retries. No new facts,
+projection table or configuration-history backfill is created. See
+[campaign summary bounds and semantics](campaign-report-summaries.md).

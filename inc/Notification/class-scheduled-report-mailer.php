@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Notification;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Portal\Delivery_View_Data;
+use Aggressive\Ads\Portal\Campaign_Report_View_Data;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -23,16 +24,18 @@ final class Scheduled_Report_Mailer {
 	/**
 	 * Reuse the portal's facts and presentation without a browser session.
 	 *
-	 * @param Settings           $settings White-label identity.
-	 * @param Reporting_Read     $reporting Shared facts and freshness.
-	 * @param Delivery_View_Data $display Shared metric formatting.
-	 * @param Org_Repository     $organizations Organization name.
+	 * @param Settings                  $settings White-label identity.
+	 * @param Reporting_Read            $reporting Shared facts and freshness.
+	 * @param Delivery_View_Data        $display Shared metric formatting.
+	 * @param Org_Repository            $organizations Organization name.
+	 * @param Campaign_Report_View_Data $campaigns Shared plan summaries.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Reporting_Read $reporting,
 		private readonly Delivery_View_Data $display,
-		private readonly Org_Repository $organizations
+		private readonly Org_Repository $organizations,
+		private readonly Campaign_Report_View_Data $campaigns
 	) {}
 
 	/**
@@ -73,6 +76,11 @@ final class Scheduled_Report_Mailer {
 		foreach ( $this->display->format_counts( $read, $period ) as $tile ) {
 			$lines[] = $tile['label'] . ': ' . $tile['value'];
 		}
+		$campaigns = $this->campaigns->for_org( $org_id, $period, $now );
+		if ( is_wp_error( $campaigns ) ) {
+			return $campaigns;
+		}
+		$lines   = array_merge( $lines, $this->campaigns->email_lines( $campaigns ) );
 		$url     = add_query_arg(
 			array(
 				'from' => $period->start,

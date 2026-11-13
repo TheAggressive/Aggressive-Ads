@@ -1,6 +1,6 @@
 # Scheduled advertiser report delivery
 
-This is the first delivery slice of #279. Weekly/monthly organization summaries
+Weekly/monthly organization summaries
 are personal opt-ins for current portal members. Each account receives its own
 message at its current sign-in address. No subscription is enabled by upgrade.
 
@@ -14,8 +14,10 @@ cron configuration; the displayed time is a schedule, not an inbox guarantee.
 Email uses the site's configured product name, the portal's metric formatting,
 native report reads, freshness state and history disclosures. The links open
 the authenticated portal and its authoritative bounded CSV export. No report
-attachment or public bearer link is created in this slice. Campaign goal/pacing
-summaries and optional share links remain parent-issue work; #279 stays open.
+attachment or public bearer link is created. Bounded campaign goal/pacing
+summaries share the portal read model and clearly distinguish current settings
+from selected-period delivery. See [campaign summary semantics](campaign-report-summaries.md).
+Expiring/revocable share links remain optional follow-up work.
 
 The per-site subscription row holds current delivery state, attempt count,
 period and next action time. Workers process bounded indexed batches. Lock names include the database, table

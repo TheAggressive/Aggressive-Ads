@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-12T07:29:25+00:00\n"
+"POT-Creation-Date: 2026-11-13T06:17:20+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -167,8 +167,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:154
 #: inc/Admin/class-conversions-screen.php:198
 #: inc/Admin/class-conversions-screen.php:260
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:327
+#: inc/Portal/class-delivery-view-data.php:318
 #: inc/Portal/class-report-actions.php:257
 #: templates/portal/partials/campaign-table.php:62
 #: templates/portal/partials/campaign-variant-comparison.php:50
@@ -1135,8 +1134,11 @@ msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: 1: menu label, 2: number of items awaiting a decision.
+#. translators: 1: configured goal amount. 2: native goal unit.
 #. translators: 1: a time of day, e.g. 12:00 AM. 2: the site's timezone for that day, e.g. PDT.
-#: inc/Admin/class-pending-work.php:147 inc/Portal/class-date-input.php:88
+#: inc/Admin/class-pending-work.php:147
+#: inc/Portal/class-campaign-report-view-data.php:174
+#: inc/Portal/class-date-input.php:88
 #, php-format
 msgid "%1$s %2$s"
 msgstr ""
@@ -1700,21 +1702,25 @@ msgid ""
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:683
-#: inc/Portal/class-delivery-view-data.php:560
-#: inc/Portal/class-delivery-view-data.php:623
-#: inc/Portal/class-delivery-view-data.php:640
-#: inc/Portal/class-delivery-view-data.php:691
+#: inc/Portal/class-campaign-report-view-data.php:97
+#: inc/Portal/class-campaign-report-view-data.php:101
+#: inc/Portal/class-delivery-view-data.php:563
+#: inc/Portal/class-delivery-view-data.php:626
+#: inc/Portal/class-delivery-view-data.php:643
+#: inc/Portal/class-delivery-view-data.php:694
 #: templates/portal/partials/campaign-table.php:105
 msgid "—"
 msgstr ""
 
 #. translators: %s: a percentage, e.g. 92.4.
+#. translators: %s: percent of the configured goal recorded, possibly above 100.
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:688
-#: inc/Portal/class-delivery-view-data.php:628
-#: inc/Portal/class-delivery-view-data.php:645
-#: inc/Portal/class-delivery-view-data.php:696
+#: inc/Portal/class-campaign-report-view-data.php:101
+#: inc/Portal/class-delivery-view-data.php:631
+#: inc/Portal/class-delivery-view-data.php:648
+#: inc/Portal/class-delivery-view-data.php:699
 #: templates/portal/partials/campaign-table.php:102
 #, php-format
 msgid "%s%%"
@@ -3249,6 +3255,7 @@ msgid "Uploaded %d. Showing your ads…"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:204
+#: inc/Portal/class-campaign-report-view-data.php:186
 #: templates/portal/partials/campaign-status.php:86
 msgid "Draft"
 msgstr ""
@@ -3274,15 +3281,18 @@ msgstr ""
 
 #: inc/Core/class-post-statuses.php:212
 #: inc/Portal/class-campaign-history-view-data.php:149
+#: inc/Portal/class-campaign-report-view-data.php:188
 msgid "Paused"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:213
+#: inc/Portal/class-campaign-report-view-data.php:189
 msgid "Completed"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:214
 #: inc/Portal/class-campaign-history-view-data.php:152
+#: inc/Portal/class-campaign-report-view-data.php:190
 msgid "Cancelled"
 msgstr ""
 
@@ -4110,44 +4120,44 @@ msgstr ""
 msgid "Reason given by the advertiser:"
 msgstr ""
 
-#: inc/Notification/class-scheduled-report-mailer.php:61
+#: inc/Notification/class-scheduled-report-mailer.php:64
 msgid "Reconciled"
 msgstr "Conciliado"
 
-#: inc/Notification/class-scheduled-report-mailer.php:62
+#: inc/Notification/class-scheduled-report-mailer.php:65
 msgid "Provisional"
 msgstr "Provisional"
 
-#: inc/Notification/class-scheduled-report-mailer.php:63
+#: inc/Notification/class-scheduled-report-mailer.php:66
 msgid "Partial"
 msgstr "Parcial"
 
 #. translators: 1: product name. 2: organization name.
-#: inc/Notification/class-scheduled-report-mailer.php:65
+#: inc/Notification/class-scheduled-report-mailer.php:68
 #, php-format
 msgid "%1$s — %2$s delivery report"
 msgstr "%1$s — informe de entrega de %2$s"
 
 #. translators: 1: first date. 2: last date. 3: timezone.
 #. translators: 1: first day of the range. 2: last day of the range. 3: timezone identifier, e.g. America/Los_Angeles.
-#: inc/Notification/class-scheduled-report-mailer.php:68
+#: inc/Notification/class-scheduled-report-mailer.php:71
 #: inc/Portal/class-delivery-view-data.php:153
 #, php-format
 msgid "%1$s to %2$s (%3$s)"
 msgstr ""
 
 #. translators: %s: report freshness state.
-#: inc/Notification/class-scheduled-report-mailer.php:69
+#: inc/Notification/class-scheduled-report-mailer.php:72
 #, php-format
 msgid "Report status: %s"
 msgstr "Estado del informe: %s"
 
-#: inc/Notification/class-scheduled-report-mailer.php:84
+#: inc/Notification/class-scheduled-report-mailer.php:92
 msgid "Open your report and download its CSV after signing in:"
 msgstr "Inicia sesión para abrir tu informe y descargar su CSV:"
 
 #. translators: %s: generation timestamp in UTC.
-#: inc/Notification/class-scheduled-report-mailer.php:87
+#: inc/Notification/class-scheduled-report-mailer.php:95
 #, php-format
 msgid ""
 "Source: native delivery. Generated %s UTC. Portal figures may change as "
@@ -4157,7 +4167,7 @@ msgstr ""
 "portal pueden cambiar mientras se completa la conciliación."
 
 #. translators: %s: generation timestamp in UTC.
-#: inc/Notification/class-scheduled-report-mailer.php:88
+#: inc/Notification/class-scheduled-report-mailer.php:96
 msgid "Change or stop report emails in Account settings:"
 msgstr ""
 "Cambia o desactiva los correos de informes en los ajustes de tu cuenta:"
@@ -4525,7 +4535,7 @@ msgid "In review"
 msgstr ""
 
 #: inc/Portal/class-campaign-list-view-data.php:212
-#: templates/portal/screens/dashboard.php:157
+#: templates/portal/screens/dashboard.php:158
 msgid "Needs your attention"
 msgstr ""
 
@@ -4546,6 +4556,192 @@ msgstr ""
 #, php-format
 msgid "%1$s → %2$s"
 msgstr ""
+
+#: inc/Portal/class-campaign-report-view-data.php:88
+msgid "Current plan status"
+msgstr "Estado actual del plan"
+
+#: inc/Portal/class-campaign-report-view-data.php:92
+msgid "Current goal"
+msgstr "Objetivo actual"
+
+#: inc/Portal/class-campaign-report-view-data.php:96
+msgid "Recorded goal units so far"
+msgstr "Unidades del objetivo registradas hasta ahora"
+
+#. translators: 1: unsupported goal type. 2: measurement availability.
+#: inc/Portal/class-campaign-report-view-data.php:97
+#: inc/Portal/class-campaign-report-view-data.php:101
+#: inc/Portal/class-campaign-report-view-data.php:172
+#: inc/Portal/class-campaign-report-view-data.php:197
+#: inc/Portal/class-delivery-view-data.php:320
+#: inc/Portal/class-delivery-view-data.php:666
+#: inc/Portal/class-delivery-view-data.php:688
+#: templates/portal/partials/campaign-table.php:121
+msgid "Not measured"
+msgstr ""
+
+#: inc/Portal/class-campaign-report-view-data.php:100
+msgid "Goal progress"
+msgstr "Progreso del objetivo"
+
+#: inc/Portal/class-campaign-report-view-data.php:104
+msgid "Goal pacing"
+msgstr "Ritmo del objetivo"
+
+#: inc/Portal/class-campaign-report-view-data.php:108
+msgid "Current schedule"
+msgstr "Calendario actual"
+
+#: inc/Portal/class-campaign-report-view-data.php:112
+msgid "Settings last updated (UTC)"
+msgstr "Última actualización de la configuración (UTC)"
+
+#: inc/Portal/class-campaign-report-view-data.php:113
+msgid "Not available"
+msgstr "No disponible"
+
+#: inc/Portal/class-campaign-report-view-data.php:121
+msgid "Default delivery plan"
+msgstr "Plan de entrega predeterminado"
+
+#: inc/Portal/class-campaign-report-view-data.php:128
+msgid ""
+"Even pacing compares goal completion with elapsed schedule, allowing 10 "
+"percentage points. ASAP plans have no even-schedule target."
+msgstr ""
+"El ritmo uniforme compara el cumplimiento del objetivo con el tiempo "
+"transcurrido del calendario, con una tolerancia de 10 puntos porcentuales. "
+"Los planes ASAP no tienen un objetivo de ritmo uniforme."
+
+#: inc/Portal/class-campaign-report-view-data.php:129
+msgid ""
+"Delivery plans are listed newest first, regardless of whether they delivered "
+"during the selected period."
+msgstr ""
+"Los planes de entrega se muestran del más reciente al más antiguo, hayan "
+"entregado o no durante el período seleccionado."
+
+#: inc/Portal/class-campaign-report-view-data.php:130
+msgid ""
+"Goals, schedules and pacing use current settings, not settings reconstructed "
+"at the end of the selected period."
+msgstr ""
+"Los objetivos, calendarios y ritmos usan la configuración actual, no una "
+"reconstrucción de la configuración al final del período seleccionado."
+
+#: inc/Portal/class-campaign-report-view-data.php:131
+msgid ""
+"Current goal progress uses retained UTC daily delivery, includes the open "
+"day, and may change as reconciliation finishes. Spend and share-of-voice "
+"progress are not measured."
+msgstr ""
+"El progreso del objetivo actual usa los datos diarios de entrega conservados "
+"en UTC, incluye el día en curso y puede cambiar al finalizar la "
+"conciliación. No se mide el progreso del gasto ni de la cuota de presencia."
+
+#: inc/Portal/class-campaign-report-view-data.php:134
+msgid ""
+"Some delivery totals exceed the summary read limit and are shown as Not "
+"measured. No partial total is presented as complete."
+msgstr ""
+"Algunos totales de entrega superan el límite de lectura del resumen y se "
+"muestran como No medido. Ningún total parcial se presenta como completo."
+
+#: inc/Portal/class-campaign-report-view-data.php:137
+msgid ""
+"Some campaign history predates delivery-plan attribution. Progress for those "
+"plans is Not measured."
+msgstr ""
+"Parte del historial de las campañas es anterior a la atribución por plan de "
+"entrega. El progreso de esos planes figura como No medido."
+
+#: inc/Portal/class-campaign-report-view-data.php:149
+#: templates/portal/partials/campaign-reports.php:31
+msgid "Campaign goals and delivery"
+msgstr "Objetivos y entrega de campañas"
+
+#. translators: 1: first selected date. 2: last selected date. 3: reporting timezone.
+#: inc/Portal/class-campaign-report-view-data.php:150
+#, php-format
+msgid "Selected-period delivery: %1$s to %2$s (%3$s)"
+msgstr "Entrega del período seleccionado: %1$s a %2$s (%3$s)"
+
+#. translators: %s: generation timestamp in UTC.
+#: inc/Portal/class-campaign-report-view-data.php:151
+#, php-format
+msgid "Current settings and recorded progress, generated %s UTC."
+msgstr "Configuración actual y progreso registrado, generado el %s UTC."
+
+#. translators: %s: maximum delivery plans displayed in a summary.
+#: inc/Portal/class-campaign-report-view-data.php:158
+#, php-format
+msgid ""
+"Showing up to %s delivery plans. Additional plans are available on the next "
+"page."
+msgstr ""
+"Se muestran hasta %s planes de entrega. Hay más planes en la página "
+"siguiente."
+
+#. translators: 1: unsupported goal type. 2: measurement availability.
+#: inc/Portal/class-campaign-report-view-data.php:172
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#: inc/Portal/class-campaign-report-view-data.php:184
+msgid "No delivery goal"
+msgstr "Sin objetivo de entrega"
+
+#: inc/Portal/class-campaign-report-view-data.php:185
+msgid "Goal met"
+msgstr "Objetivo alcanzado"
+
+#: inc/Portal/class-campaign-report-view-data.php:187
+#: templates/portal/partials/campaign-creative-step.php:225
+#: templates/portal/partials/campaign-review-step.php:205
+msgid "Ready"
+msgstr ""
+
+#: inc/Portal/class-campaign-report-view-data.php:191
+msgid "Not started"
+msgstr "Sin iniciar"
+
+#: inc/Portal/class-campaign-report-view-data.php:192
+msgid "As soon as possible"
+msgstr "Lo antes posible"
+
+#: inc/Portal/class-campaign-report-view-data.php:193
+msgid "No complete schedule"
+msgstr "Sin calendario completo"
+
+#: inc/Portal/class-campaign-report-view-data.php:194
+msgid "Ahead of schedule"
+msgstr "Por delante del calendario"
+
+#: inc/Portal/class-campaign-report-view-data.php:195
+msgid "Behind schedule"
+msgstr "Por detrás del calendario"
+
+#: inc/Portal/class-campaign-report-view-data.php:196
+msgid "Within schedule tolerance"
+msgstr "Dentro de la tolerancia del calendario"
+
+#: inc/Portal/class-campaign-report-view-data.php:209
+#: inc/Portal/class-campaign-report-view-data.php:210
+msgid "Not set"
+msgstr "Sin definir"
+
+#. translators: 1: current start date/time. 2: current end date/time.
+#: inc/Portal/class-campaign-report-view-data.php:211
+#, php-format
+msgid "%1$s to %2$s"
+msgstr "%1$s a %2$s"
+
+#: inc/Portal/class-campaign-report-view-data.php:226
+#: templates/portal/partials/campaign-reports.php:42
+msgid "No delivery plans are available in this summary."
+msgstr "No hay planes de entrega disponibles en este resumen."
 
 #: inc/Portal/class-catalogue-view-data.php:145
 msgid "Custom schedule"
@@ -4915,65 +5111,54 @@ msgstr ""
 msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:289
-#: inc/Portal/class-delivery-view-data.php:663
-#: inc/Portal/class-delivery-view-data.php:685
-#: templates/portal/partials/campaign-table.php:121
-msgid "Not measured"
-msgstr ""
-
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:305
+#: inc/Portal/class-delivery-view-data.php:314
 #: inc/Portal/class-report-actions.php:254
 #: templates/portal/partials/campaign-table.php:58
 #: templates/portal/partials/campaign-variant-comparison.php:46
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:310
+#: inc/Portal/class-delivery-view-data.php:315
 #: inc/Portal/class-report-actions.php:255
 #: templates/portal/partials/campaign-table.php:60
 #: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:315
+#: inc/Portal/class-delivery-view-data.php:316
 #: templates/portal/partials/campaign-table.php:61
 #: templates/portal/partials/campaign-variant-comparison.php:48
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:321
+#: inc/Portal/class-delivery-view-data.php:317
 #: templates/portal/partials/campaign-variant-comparison.php:49
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:386
+#: inc/Portal/class-delivery-view-data.php:389
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:390
+#: inc/Portal/class-delivery-view-data.php:393
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
 #. translators: %d: creative id.
-#: inc/Portal/class-delivery-view-data.php:546
+#: inc/Portal/class-delivery-view-data.php:549
 #, php-format
 msgid "Ad %d"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:558
+#: inc/Portal/class-delivery-view-data.php:561
 msgid "Before per-ad counting"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:559
+#: inc/Portal/class-delivery-view-data.php:562
 msgid "An ad no longer on this placement"
 msgstr ""
 
@@ -5255,6 +5440,11 @@ msgstr ""
 #: inc/Repository/class-campaign-draft-persistence.php:50
 msgid "The campaign changes could not be saved completely."
 msgstr ""
+
+#: inc/Repository/class-campaign-report-repository.php:283
+msgid "Campaign summaries could not be loaded. Please try again."
+msgstr ""
+"No se pudieron cargar los resúmenes de las campañas. Inténtalo de nuevo."
 
 #: inc/Repository/class-org-access-repository.php:104
 #: inc/Repository/class-org-access-repository.php:181
@@ -7125,11 +7315,6 @@ msgstr ""
 msgid "Needs a file"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:225
-#: templates/portal/partials/campaign-review-step.php:205
-msgid "Ready"
-msgstr ""
-
 #: templates/portal/partials/campaign-creative-step.php:231
 msgid ""
 "This placement is no longer available. Go back to package and dates and "
@@ -7460,7 +7645,7 @@ msgstr ""
 
 #. translators: 1: duration, e.g. 30 days. 2: number of ad sizes.
 #: templates/portal/partials/campaign-package-grid.php:49
-#: templates/portal/screens/dashboard.php:201
+#: templates/portal/screens/dashboard.php:202
 #, php-format
 msgid "%1$s · %2$d size"
 msgid_plural "%1$s · %2$d sizes"
@@ -7495,6 +7680,18 @@ msgstr ""
 #: templates/portal/partials/campaign-plan-step.php:111
 msgid "02 · Schedule"
 msgstr ""
+
+#: templates/portal/partials/campaign-reports.php:58
+msgid "Open campaign"
+msgstr "Abrir campaña"
+
+#: templates/portal/partials/campaign-reports.php:63
+msgid "Older delivery plans"
+msgstr "Planes de entrega anteriores"
+
+#: templates/portal/partials/campaign-reports.php:66
+msgid "Newest delivery plans"
+msgstr "Planes de entrega más recientes"
 
 #: templates/portal/partials/campaign-request-form.php:51
 msgid "The review team does it for you. Tell them what you need."
@@ -8767,27 +8964,27 @@ msgstr ""
 msgid "Native delivery"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:139
+#: templates/portal/screens/dashboard.php:140
 msgid "Your campaigns"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:141
+#: templates/portal/screens/dashboard.php:142
 msgid "View all"
 msgstr ""
 
 #. translators: %s: number of further campaigns needing attention.
-#: templates/portal/screens/dashboard.php:174
+#: templates/portal/screens/dashboard.php:175
 #, php-format
 msgid "And %s more"
 msgid_plural "And %s more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/screens/dashboard.php:186
+#: templates/portal/screens/dashboard.php:187
 msgid "Start a campaign"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:187
+#: templates/portal/screens/dashboard.php:188
 msgid "Pick a package. Dates and ads come next."
 msgstr ""
 
