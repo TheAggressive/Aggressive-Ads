@@ -581,7 +581,7 @@ pnpm test:php:unit            # fast, no database
 pnpm env:start                # WordPress 7.1 + MySQL 8.4 at localhost:9960
 pnpm test:php:integration     # real WordPress + isolated test database
 pnpm test:php:multisite       # real multisite bootstrap
-pnpm test:php:security
+pnpm test:php:integration --testsuite security  # only the security suite
 pnpm test:js
 pnpm test:e2e:browsers        # install browsers; what pnpm qa runs
 pnpm test:e2e:install         # the same, plus system libraries (needs sudo; what CI runs)

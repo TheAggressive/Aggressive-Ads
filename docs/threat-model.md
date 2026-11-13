@@ -60,7 +60,7 @@ Treat every uploaded file as hostile.
 | Substituting stored creative on disk | The same AEAD. A flipped byte, a truncation, a re-ordered chunk and a file written under another key are all read failures, not different artwork. **One exception, kept for migration:** a file without the cipher's header is read as plaintext, because `encrypt_existing_files()` has to be able to serve the queue while it works through pre-encryption files. A file *replaced* with plaintext therefore previews as whatever was written; the sha256 re-check refuses it at promotion. Reaching this needs write access to the server's filesystem, which already means more than artwork |
 | Browser-supplied MIME | Never trusted. `_aggr_mime` is server-detected |
 
-**On SVG specifically:** `svg-support` is active on this site, so WordPress will accept SVG uploads generally. An accepted SVG is an XML document with `<script>` support that renders inline on the public site — stored XSS executing with each visitor's session. Our allowlist is independent of `upload_mimes` precisely so that a site-wide setting cannot re-open this. If SVG creative is ever wanted, it needs a real sanitizer and its own ADR.
+**On SVG specifically:** site-wide plugins can enable SVG uploads. SVG can contain executable content, so creative uploads use their own allowlist, independent of `upload_mimes`. Supporting SVG creative requires a sanitizer and an explicit change to the upload and rendering contracts; it is not enabled by P18's HTML5 work.
 
 **On encryption at rest:** the layer that does not depend on server configuration. The deny files this plugin writes are ignored by nginx; the UUID filename is unguessable but a backup does not have to guess; the streaming endpoint authorizes every read but a filesystem copy goes around it. Encryption is the one control that survives all four. The key lives in `AGGR_CREATIVE_KEY` or in an option — see [data-schema.md](data-schema.md) — and never in the directory it protects.
 
@@ -133,9 +133,21 @@ Public fill, beacon, and click hop are always registered. Native delivery is not
 
 ## Injection and CSRF
 
+Shared rate-limit claims fail closed when a counter read or changed-value write
+fails, as well as when a lock or atomic cache increment is unavailable. The
+database fallback always releases its advisory lock. `RateLimitRepositoryTest`
+injects actual read/insert/update failures, verifies the durable allowance is
+preserved and proves recovery. `InventoryStorefrontTest` exercises the signed
+form through that failure and asserts no draft is created. A storage failure
+returns the generic retryable error with status 503, without SQL details.
+
 **`_code` and `html5` creatives are arbitrary attacker-controlled HTML on a public page.** No code path renders either today: `_aggr_kind` is stored and never interpreted, and every creative is served as an image through `fill.js`'s DOM properties. P18 introduces the renderer and owns this boundary; until then the rule stands that advertisers can never set them — both kinds require `aggr_review_campaigns`. The advertiser role also lacks `unfiltered_html`. Every REST route has a real `permission_callback`. `bin/ci/check-permission-callbacks.sh` fails the build on any `'permission_callback' => '__return_true'`, because that is a thing people write while debugging and then commit.
 
-Every `admin-post` handler calls `check_admin_referer()`. Security tests cover nonce-missing, nonce-forged, and insufficient-capability, expecting `WPDieException`.
+Protected `admin-post` writes verify an action-specific nonce independently of
+the required capabilities. Handlers may check it directly or use a shared
+processing method, as the inventory form does. Security tests exercise missing
+and forged nonces and insufficient capabilities through the actual entry points;
+the refusal is a `WP_Error` or `WPDieException` according to the adapter contract.
 
 **A form posts the act it offers, not the field it writes.** The variant pause control is the clearest case: `live → cancelled` is a legal assignment transition, and `Workflow\Assignment_Editor` allows it because the routes meant to offer withdrawal need it. Had the pause button posted a `status`, a hand-made post to that action would have cancelled an assignment — terminally, since the same button could not resume what it had cancelled. It posts `intent=pause|resume`, and `Portal\Creative_Actions::process_status()` maps that to the one status the button may write; anything else is refused with `aggr_creative_status_intent_invalid` before the editor is reached. `CreativeVariantControlsTest` posts `cancelled`, `completed` and a raw status string at it and asserts the row does not move, and the guard was verified by mutating the map to forward its input and watching that test fail.
 

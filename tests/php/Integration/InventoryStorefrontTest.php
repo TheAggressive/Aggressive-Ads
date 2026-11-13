@@ -225,6 +225,35 @@ final class InventoryStorefrontTest extends WP_UnitTestCase {
 		$this->assertSame( $before, $this->counts() );
 	}
 
+	/** A refused counter claim must stop the actual signed form before creation. */
+	public function test_unavailable_creation_counter_refuses_without_writing_a_draft(): void {
+		global $wpdb;
+		$before     = $this->counts();
+		$key        = 'aggr_rl_' . get_current_blog_id() . '_' . Rate_Limiter::ACTION_CAMPAIGN_CREATE . '_' . $this->user;
+		$failed     = 0;
+		$filter     = static function ( string $query ) use ( $wpdb, $key, &$failed ): string {
+			if ( str_starts_with( $query, 'INSERT' ) && str_contains( $query, "'_transient_" . $key . "'" ) ) {
+				++$failed;
+				return $wpdb->prepare( 'SELECT %i FROM %i', 'aggr_missing_counter_column', $wpdb->options );
+			}
+			return $query;
+		};
+		$suppressed = $wpdb->suppress_errors( true );
+		add_filter( 'query', $filter );
+		try {
+			$result = $this->actions->process( $this->input() );
+		} finally {
+			remove_filter( 'query', $filter );
+			$wpdb->suppress_errors( $suppressed );
+		}
+		$this->assertSame( 1, $failed );
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_rate_limit_unavailable', $result->get_error_code() );
+		$this->assertSame( array( 'status' => 503 ), $result->get_error_data() );
+		$this->assertSame( $before, $this->counts() );
+		$this->assertIsInt( $this->actions->process( $this->input() ), 'The same form can be retried after storage recovers.' );
+	}
+
 	/** The request cannot use a posted organization when membership is absent. */
 	public function test_an_unaffiliated_advertiser_cannot_select_an_organization(): void {
 		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'aggr_advertiser' ) ) );

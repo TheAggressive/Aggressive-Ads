@@ -9,6 +9,7 @@ ci:doctor    → node bin/ci/doctor.mjs
 composer:verify → strict manifest/lock validation + dependency dry run
 ci:build     → pnpm build
 ci:frontend  → lint:js && typecheck && lint:css && format:check && lint:shell && test:tools && test:js
+ci:i18n      → translation extraction and catalogue drift/completeness/validity checks
 ci:php       → lint:php && analyse:php && test:php:unit
 ci:coverage  → one integration run + unit coverage + quantitative regression floor
 ci:php:wp    → test:php:multisite
@@ -16,9 +17,6 @@ ci:e2e       → test:e2e  (consumes the build artifact)
 ci:package   → release:package && release:verify  (consumes the build artifact)
 ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
 ```
-
-The i18n lane lands with POT / `.mo` tooling. Until then it is a future gate,
-not a command the repository pretends to run.
 
 **The lane list is not maintained twice.** `bin/ci/verify.sh` runs whatever
 `bin/ci/lanes.mjs` reads out of `ci.yml`: verification jobs in dependency order,
@@ -169,7 +167,7 @@ gate rather than part of this metric.
 
 - file length
 - GitHub Actions pinned to SHAs, each carrying a version comment
-- every `ci:*` lane present in **both** the workflow and `verify.sh`
+- every `ci:*` lane reachable from the workflow-derived local verification plan
 - **no `get_posts` / `WP_Query` / `get_post_meta` / `$wpdb` outside `inc/Repository/`**
 - **no AdSanity identifiers in `inc/` or `templates/`**
 - no `'permission_callback' => '__return_true'`
