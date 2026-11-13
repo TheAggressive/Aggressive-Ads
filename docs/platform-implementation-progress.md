@@ -103,9 +103,11 @@ Shared contract:
   variant management, comparison, durable review history and exact-revision
   device preview are built. See
   [platform-p17-creative-experience.md](platform-p17-creative-experience.md).
-- [ ] **P18 — Rich creative types.** Tracking: #262. Responsive images,
-  sandboxed HTML5, staff-only third-party tags and VAST-compatible video remain
-  behind the creative-handler boundary.
+- [ ] **P18 — Rich creative types.** Tracking: #262. The
+  [phase definition](platform-p18-rich-creative-types.md) specifies responsive
+  images, bounded local HTML5, disabled-by-default staff tags and a native VAST
+  profile. Implementation is pending; executable/external modes require browser
+  qualification and P27. Defining a handler does not enable it.
 - [ ] **P19 — Billing domain.** Tracking: #263. Accounts, orders, invoices,
   payments, credits, refunds and an immutable commercial ledger; hosted payment
   flows only; delivery reads local commercial eligibility.

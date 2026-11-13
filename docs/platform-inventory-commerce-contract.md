@@ -107,6 +107,11 @@ HTML5, staff-only third-party tags and VAST-compatible video providers. Each
 handler declares validation, review, rendering, CSP/sandbox, measurement and
 fallback behavior.
 
+The [P18 definition](platform-p18-rich-creative-types.md) specifies the supported
+profiles, private publication/preview boundaries, resource limits and evidence.
+Its script/external modes retain explicit browser-qualification and P27 gates;
+the definition does not enable those modes or mark the phase complete.
+
 ### P19 — Billing domain
 
 Owns accounts, orders, invoices, payments, credits, refunds, provider webhook
