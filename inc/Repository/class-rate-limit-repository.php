@@ -25,7 +25,7 @@ final class Rate_Limit_Repository {
 	 * @param int    $limit  Attempts allowed in the window.
 	 * @param int    $window Window length in seconds.
 	 * @param int    $now    Current Unix timestamp.
-	 * @return array{allowed: bool, count: int, reset: int}|null Null when the lock cannot be acquired.
+	 * @return array{allowed: bool, count: int, reset: int}|null Null when the backend or lock is unavailable.
 	 */
 	public function claim( string $key, int $limit, int $window, int $now ): ?array {
 		if ( '' === $key || $limit < 1 || $window < 1 || $now < 0 ) {
@@ -121,7 +121,11 @@ final class Rate_Limit_Repository {
 		}
 
 		try {
+			// The successful lock query cleared last_error before this possibly cached read.
 			$state = get_transient( $key );
+			if ( '' !== $wpdb->last_error ) {
+				return null;
+			}
 
 			if ( ! is_array( $state ) || ! isset( $state['count'], $state['reset'] ) || $now >= (int) $state['reset'] ) {
 				$state = array(
@@ -142,7 +146,7 @@ final class Rate_Limit_Repository {
 			}
 
 			++$count;
-			set_transient(
+			$saved = set_transient(
 				$key,
 				array(
 					'count' => $count,
@@ -150,6 +154,10 @@ final class Rate_Limit_Repository {
 				),
 				max( 1, $reset - $now )
 			);
+			// A changed count must be persisted before the protected operation is allowed.
+			if ( ! $saved ) {
+				return null;
+			}
 
 			return array(
 				'allowed' => true,

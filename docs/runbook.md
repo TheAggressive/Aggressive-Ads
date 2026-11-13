@@ -154,6 +154,16 @@ wp cron event run aggr_reconcile_campaigns
 
 ---
 
+### Rate-limit storage recovery
+
+The shared limiter returns `aggr_rate_limit_unavailable` with status 503 when
+its counter cannot be read or persisted. Restore database/cache health and retry;
+do not disable the limiter or reset counters to bypass the refusal. The database
+fallback releases its lock even on failure and preserves previously consumed
+attempts. This differs from an exhausted allowance (429), which requires waiting
+for its reset. The inventory form displays a generic retry message on refusal;
+the draft is not created when its creation counter is unavailable.
+
 ### Advertiser inventory requests
 
 Advertiser inventory requests follow the
