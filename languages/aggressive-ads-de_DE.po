@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-13T11:38:12+00:00\n"
+"POT-Creation-Date: 2026-11-14T05:34:38+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -485,8 +485,8 @@ msgstr "Zugangsdaten ausgestellt"
 #: inc/Admin/class-placement-screen.php:171
 #: inc/Admin/class-review-screen.php:375
 #: templates/portal/partials/campaign-overlays.php:304
-#: templates/portal/partials/campaign-overlays.php:357
-#: templates/portal/partials/campaign-variant-artwork.php:80
+#: templates/portal/partials/campaign-overlays.php:362
+#: templates/portal/partials/campaign-variant-artwork.php:85
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -1585,7 +1585,7 @@ msgstr "Kein Grund wurde erfasst"
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
 #: inc/Portal/class-campaign-actions.php:907
-#: inc/Portal/class-creative-actions.php:704
+#: inc/Portal/class-creative-actions.php:707
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-inventory-actions.php:42
 #: inc/Portal/class-inventory-view-data.php:51
@@ -1595,7 +1595,7 @@ msgstr "Kein Grund wurde erfasst"
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-copies.php:83
-#: inc/Workflow/class-creative-manager.php:755
+#: inc/Workflow/class-creative-manager.php:761
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
 msgid "You do not have permission to do that."
@@ -2251,7 +2251,7 @@ msgstr "Alternativtext"
 #: inc/Workflow/class-campaign-change-summary.php:82
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:128
-#: templates/portal/partials/campaign-upload-form.php:163
+#: templates/portal/partials/campaign-upload-form.php:167
 #: templates/portal/screens/campaign.php:661
 msgid "Destination"
 msgstr "Zielseite"
@@ -2989,8 +2989,8 @@ msgstr ""
 "Ein Startdatum, das bereits verstrichen ist, kann nicht verschoben werden."
 
 #: inc/Admin/class-settings-screen.php:218
-#: templates/portal/partials/campaign-overlays.php:347
-#: templates/portal/partials/campaign-upload-form.php:169
+#: templates/portal/partials/campaign-overlays.php:352
+#: templates/portal/partials/campaign-upload-form.php:173
 msgid "Destination URL"
 msgstr "Ziel-URL"
 
@@ -3715,15 +3715,40 @@ msgid "Placement group"
 msgstr "Platzierungsgruppe"
 
 #: inc/Install/class-assignment-health.php:57
-#: inc/Install/class-assignment-health.php:83
+#: inc/Install/class-assignment-health.php:108
 msgid "Every creative has a delivery assignment"
 msgstr "Jedes Werbemittel hat eine Auslieferungszuordnung"
 
-#: inc/Install/class-assignment-health.php:73
+#: inc/Install/class-assignment-health.php:61
+msgid "Image eligibility upgrade"
+msgstr "Upgrade der Bildauslieferung"
+
+#: inc/Install/class-assignment-health.php:80
+msgid "Image eligibility upgrade is complete"
+msgstr "Das Upgrade der Bildauslieferung ist abgeschlossen"
+
+#: inc/Install/class-assignment-health.php:80
+msgid "Image eligibility upgrade needs attention"
+msgstr "Das Upgrade der Bildauslieferung muss überprüft werden"
+
+#: inc/Install/class-assignment-health.php:82
+msgid ""
+"The image eligibility schema and bounded projection upgrade are complete. "
+"This check does not verify every media file."
+msgstr "Das Datenbankschema und die begrenzte Stapelverarbeitung für die Bildauslieferung sind aktualisiert. Diese Prüfung kontrolliert nicht jede Mediendatei."
+
+#: inc/Install/class-assignment-health.php:83
+msgid ""
+"Complete the database upgrade and check scheduled image projection work. "
+"Existing single-image ads retain their compatibility path; responsive "
+"uploads require the new schema. See the plugin runbook for recovery."
+msgstr "Schließen Sie das Datenbank-Upgrade ab und prüfen Sie die geplante Verarbeitung der Bildauslieferung. Bestehende Anzeigen mit einem Bild bleiben kompatibel; responsive Uploads benötigen das neue Schema. Hinweise zur Wiederherstellung stehen im Betriebshandbuch des Plugins."
+
+#: inc/Install/class-assignment-health.php:98
 msgid "The creative assignment table is missing"
 msgstr "Die Werbemittel-Zuordnungstabelle fehlt"
 
-#: inc/Install/class-assignment-health.php:74
+#: inc/Install/class-assignment-health.php:99
 msgid ""
 "A database upgrade has not completed. Deactivating and reactivating the "
 "plugin runs it again."
@@ -3731,18 +3756,18 @@ msgstr ""
 "Ein Datenbank-Upgrade wurde nicht abgeschlossen. Deaktivieren und Aktivieren "
 "des Plugins führt es erneut aus."
 
-#: inc/Install/class-assignment-health.php:84
+#: inc/Install/class-assignment-health.php:109
 msgid "The delivery model upgrade has covered every creative on this site."
 msgstr ""
 "Das Upgrade des Auslieferungsmodells hat jedes Werbemittel auf dieser "
 "Website abgedeckt."
 
-#: inc/Install/class-assignment-health.php:93
+#: inc/Install/class-assignment-health.php:118
 msgid "The delivery model upgrade is still running"
 msgstr "Das Upgrade des Auslieferungsmodells läuft noch"
 
 #. translators: %d: number of creatives not yet migrated.
-#: inc/Install/class-assignment-health.php:96
+#: inc/Install/class-assignment-health.php:121
 #, php-format
 msgid ""
 "%d creatives are waiting. This runs in the background and nothing is "
@@ -3751,12 +3776,12 @@ msgstr ""
 "%d Werbemittel warten. Dies läuft im Hintergrund und währenddessen wird "
 "nichts beeinträchtigt — die Werbung wird weiterhin wie gewohnt ausgeliefert."
 
-#: inc/Install/class-assignment-health.php:104
+#: inc/Install/class-assignment-health.php:129
 msgid "Some creatives have no delivery assignment"
 msgstr "Einige Werbemittel haben keine Auslieferungszuordnung"
 
 #. translators: %d: number of creatives left behind.
-#: inc/Install/class-assignment-health.php:107
+#: inc/Install/class-assignment-health.php:132
 #, php-format
 msgid ""
 "%d creatives were skipped by the delivery model upgrade, which reports "
@@ -3768,7 +3793,7 @@ msgstr ""
 "wie gewohnt. Ein Werbemittel ohne Kampagne oder Platzierung ist hier zu "
 "erwarten; alles andere sollte gemeldet werden."
 
-#: inc/Install/class-assignment-health.php:126
+#: inc/Install/class-assignment-health.php:151
 #: inc/Install/class-conversion-health.php:285
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
@@ -4660,7 +4685,7 @@ msgstr "Verwenden Sie für den Kampagnennamen maximal 160 Zeichen."
 
 #: inc/Portal/class-campaign-actions.php:818
 #: inc/Portal/class-campaign-change-form.php:125
-#: inc/Workflow/class-campaign-validator.php:236
+#: inc/Workflow/class-campaign-validator.php:239
 #, fuzzy
 msgid "Choose an end date."
 msgstr "Wählen Sie ein Startdatum."
@@ -4668,28 +4693,28 @@ msgstr "Wählen Sie ein Startdatum."
 #: inc/Portal/class-campaign-actions.php:819
 #: inc/Portal/class-campaign-change-form.php:126
 #: inc/Workflow/class-campaign-editor.php:455
-#: inc/Workflow/class-campaign-validator.php:239
+#: inc/Workflow/class-campaign-validator.php:242
 msgid "The end date must be after the start date."
 msgstr "Das Enddatum muss nach dem Startdatum liegen."
 
 #: inc/Portal/class-campaign-actions.php:820
-#: inc/Workflow/class-campaign-validator.php:227
+#: inc/Workflow/class-campaign-validator.php:230
 msgid "Choose a start date."
 msgstr "Wählen Sie ein Startdatum."
 
 #: inc/Portal/class-campaign-actions.php:821
-#: inc/Workflow/class-campaign-validator.php:230
+#: inc/Workflow/class-campaign-validator.php:233
 msgid "The start date has already passed. Choose a later one."
 msgstr "Das Startdatum ist bereits abgelaufen. Wählen Sie ein späteres."
 
 #: inc/Portal/class-campaign-actions.php:822
-#: inc/Workflow/class-campaign-validator.php:233
+#: inc/Workflow/class-campaign-validator.php:236
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 "Das Startdatum muss um Mitternacht in der Zeitzone der Website beginnen."
 
 #: inc/Portal/class-campaign-actions.php:823
-#: inc/Workflow/class-campaign-validator.php:242
+#: inc/Workflow/class-campaign-validator.php:245
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 "Das Enddatum muss den gesamten ausgewählten Tag in der Zeitzone der Website "
@@ -4773,7 +4798,7 @@ msgstr ""
 "werden."
 
 #: inc/Portal/class-campaign-actions.php:837
-#: inc/Workflow/class-campaign-copier.php:325
+#: inc/Workflow/class-campaign-copier.php:330
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 "Die Kampagne konnte nicht kopiert werden. Bitte versuchen Sie es erneut."
@@ -5282,12 +5307,12 @@ msgstr ""
 msgid "Cancelled and no longer running."
 msgstr "Storniert und läuft nicht mehr."
 
-#: inc/Portal/class-creative-actions.php:515
+#: inc/Portal/class-creative-actions.php:518
 msgid "That is not something you can do to a creative."
 msgstr "Das ist keine Aktion, die Sie an einem Werbemittel durchführen können."
 
 #. translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30.
-#: inc/Portal/class-creative-actions.php:678
+#: inc/Portal/class-creative-actions.php:681
 #: templates/portal/partials/campaign-variant-share.php:134
 #, php-format
 msgid ""
@@ -5308,7 +5333,7 @@ msgstr "Eigene Laufdaten hinzufügen"
 #: inc/Workflow/class-creative-change-manager.php:162
 #: inc/Workflow/class-creative-change-manager.php:497
 #: inc/Workflow/class-creative-manager.php:148
-#: inc/Workflow/class-creative-manager.php:592
+#: inc/Workflow/class-creative-manager.php:596
 msgid "Enter the destination URL for this creative."
 msgstr "Geben Sie die Ziel-URL für dieses Werbemittel ein."
 
@@ -5316,7 +5341,7 @@ msgstr "Geben Sie die Ziel-URL für dieses Werbemittel ein."
 #: inc/Workflow/class-creative-change-manager.php:166
 #: inc/Workflow/class-creative-change-manager.php:501
 #: inc/Workflow/class-creative-manager.php:152
-#: inc/Workflow/class-creative-manager.php:596
+#: inc/Workflow/class-creative-manager.php:600
 msgid ""
 "Enter a valid http or https destination URL without embedded credentials."
 msgstr ""
@@ -5347,20 +5372,20 @@ msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:270
 #: inc/Portal/class-creative-feedback.php:271
-#: inc/Portal/class-creative-feedback.php:314
-#: inc/Portal/class-creative-feedback.php:338
-#: inc/Portal/class-creative-feedback.php:347
-#: inc/Workflow/class-creative-manager.php:415
-#: inc/Workflow/class-creative-manager.php:421
-#: inc/Workflow/class-creative-manager.php:565
-#: inc/Workflow/class-creative-manager.php:571
+#: inc/Portal/class-creative-feedback.php:316
+#: inc/Portal/class-creative-feedback.php:340
+#: inc/Portal/class-creative-feedback.php:349
+#: inc/Workflow/class-creative-manager.php:417
+#: inc/Workflow/class-creative-manager.php:423
+#: inc/Workflow/class-creative-manager.php:569
+#: inc/Workflow/class-creative-manager.php:575
 #: inc/Workflow/class-share-editor.php:69
 #: inc/Workflow/class-share-editor.php:75
 msgid "You do not have permission to change that creative."
 msgstr "Sie haben keine Berechtigung, dieses Werbemittel zu ändern."
 
 #: inc/Portal/class-creative-feedback.php:272
-#: inc/Workflow/class-creative-manager.php:434
+#: inc/Workflow/class-creative-manager.php:436
 msgid ""
 "This ad has already been approved, so new artwork is submitted as an update "
 "for review rather than swapped in here."
@@ -5369,14 +5394,15 @@ msgstr ""
 "Update zur Prüfung eingereicht, anstatt hier ausgetauscht zu werden."
 
 #: inc/Portal/class-creative-feedback.php:273
-#: inc/Workflow/class-creative-manager.php:502
+#: inc/Workflow/class-creative-manager.php:506
+#: inc/Workflow/class-creative-manager.php:613
 msgid "The new artwork could not be saved. Please try again."
 msgstr ""
 "Das neue Werbemittel konnte nicht gespeichert werden. Bitte versuchen Sie es "
 "erneut."
 
 #: inc/Portal/class-creative-feedback.php:274
-#: inc/Workflow/class-creative-manager.php:583
+#: inc/Workflow/class-creative-manager.php:587
 msgid ""
 "This ad has already been approved, so its destination is changed by "
 "requesting an update rather than edited here."
@@ -5408,26 +5434,42 @@ msgstr ""
 #: inc/Portal/class-creative-feedback.php:278
 #: inc/Workflow/class-creative-change-manager.php:118
 #: inc/Workflow/class-creative-change-manager.php:211
+#: inc/Workflow/class-creative-promoter.php:82
 msgid "Another update is already being saved for this ad. Try again."
 msgstr ""
 "Eine weitere Aktualisierung für diese Anzeige wird bereits gespeichert. "
 "Versuchen Sie es erneut."
 
 #: inc/Portal/class-creative-feedback.php:279
+#: inc/Workflow/class-campaign-validator.php:213
+#: inc/Workflow/class-image-handler.php:168
+msgid ""
+"Choose a base image and up to five different renditions in the placement’s "
+"supported sizes, totaling no more than 2 MB."
+msgstr "Wählen Sie ein Basisbild und bis zu fünf unterschiedliche Bildvarianten in den unterstützten Größen der Platzierung aus, insgesamt höchstens 2 MB."
+
+#: inc/Portal/class-creative-feedback.php:280
+#: inc/Workflow/class-image-handler.php:47
+msgid ""
+"Responsive image delivery is not ready. Ask the publisher to complete the "
+"database upgrade, then try again."
+msgstr "Die responsive Bildauslieferung ist noch nicht bereit. Bitten Sie den Herausgeber, das Datenbank-Upgrade abzuschließen, und versuchen Sie es erneut."
+
+#: inc/Portal/class-creative-feedback.php:281
 msgid "No file was received. Choose an ad creative and try again."
 msgstr ""
 "Es wurde keine Datei empfangen. Wählen Sie ein Werbemittel und versuchen Sie "
 "es erneut."
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Portal/class-creative-feedback.php:282
+#: inc/Portal/class-creative-feedback.php:284
 #, php-format
 msgid "That file is larger than %s. Save it at a smaller size and try again."
 msgstr ""
 "Diese Datei ist größer als %s. Speichern Sie sie in einer kleineren Größe "
 "und versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:285
+#: inc/Portal/class-creative-feedback.php:287
 msgid ""
 "That ad creative has too many pixels to process. Resize it to the placement "
 "dimensions and try again."
@@ -5436,21 +5478,21 @@ msgstr ""
 "an die Abmessungen der Platzierung an und versuchen Sie es erneut."
 
 #. translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF.
-#: inc/Portal/class-creative-feedback.php:287
+#: inc/Portal/class-creative-feedback.php:289
 #, fuzzy, php-format
 msgid "That file is not a readable image. Supported formats: %s."
 msgstr ""
 "Diese Datei ist kein lesbares Bild. Unterstützt werden JPEG, PNG, GIF und "
 "WebP."
 
-#: inc/Portal/class-creative-feedback.php:288
+#: inc/Portal/class-creative-feedback.php:290
 msgid "The file contents do not match its filename, so it was not accepted."
 msgstr ""
 "Der Dateiinhalt entspricht nicht dem Dateinamen, daher wurde er nicht "
 "akzeptiert."
 
 #. translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF.
-#: inc/Portal/class-creative-feedback.php:290
+#: inc/Portal/class-creative-feedback.php:292
 #: inc/Workflow/class-creative-uploader.php:189
 #, fuzzy, php-format
 msgid "That file type is not supported. Supported formats: %s."
@@ -5458,59 +5500,59 @@ msgstr ""
 "Dieser Dateityp wird nicht unterstützt. Verwenden Sie JPEG, PNG, GIF oder "
 "WebP."
 
-#: inc/Portal/class-creative-feedback.php:291
+#: inc/Portal/class-creative-feedback.php:293
 msgid "The upload did not complete. Try again."
 msgstr "Der Upload wurde nicht abgeschlossen. Versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:293
+#: inc/Portal/class-creative-feedback.php:295
 msgid "That placement is not available for this campaign."
 msgstr "Diese Platzierung ist für diese Kampagne nicht verfügbar."
 
-#: inc/Portal/class-creative-feedback.php:294
+#: inc/Portal/class-creative-feedback.php:296
 #: inc/Workflow/class-assignment-editor.php:226
 #: inc/Workflow/class-campaign-editor.php:362
-#: inc/Workflow/class-creative-manager.php:428
-#: inc/Workflow/class-creative-manager.php:577
-#: inc/Workflow/class-creative-manager.php:654
-#: inc/Workflow/class-creative-manager.php:759
+#: inc/Workflow/class-creative-manager.php:430
+#: inc/Workflow/class-creative-manager.php:581
+#: inc/Workflow/class-creative-manager.php:660
+#: inc/Workflow/class-creative-manager.php:765
 #: inc/Workflow/class-line-item-editor.php:73
 #: inc/Workflow/class-share-editor.php:81
 msgid "This campaign cannot be changed right now."
 msgstr "Diese Kampagne kann derzeit nicht geändert werden."
 
-#: inc/Portal/class-creative-feedback.php:295
+#: inc/Portal/class-creative-feedback.php:297
 msgid "There have been too many uploads. Wait a moment and try again."
 msgstr ""
 "Es wurden zu viele Uploads durchgeführt. Warten Sie einen Moment und "
 "versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:312
+#: inc/Portal/class-creative-feedback.php:314
 msgid "You do not have permission to upload creative for this campaign."
 msgstr ""
 "Sie haben keine Berechtigung, Werbemittel für diese Kampagne hochzuladen."
 
-#: inc/Portal/class-creative-feedback.php:313
-#: inc/Workflow/class-creative-manager.php:642
+#: inc/Portal/class-creative-feedback.php:315
 #: inc/Workflow/class-creative-manager.php:648
+#: inc/Workflow/class-creative-manager.php:654
 msgid "You do not have permission to remove that creative."
 msgstr "Sie haben keine Berechtigung, dieses Werbemittel zu entfernen."
 
-#: inc/Portal/class-creative-feedback.php:315
-#: inc/Workflow/class-creative-manager.php:658
+#: inc/Portal/class-creative-feedback.php:317
+#: inc/Workflow/class-creative-manager.php:664
 msgid "A published creative cannot be removed from this draft workflow."
 msgstr ""
 "Ein veröffentlichtes Werbemittel kann nicht aus diesem Entwurfsworkflow "
 "entfernt werden."
 
-#: inc/Portal/class-creative-feedback.php:316
-#: inc/Workflow/class-creative-manager.php:668
-#: inc/Workflow/class-creative-manager.php:677
+#: inc/Portal/class-creative-feedback.php:318
+#: inc/Workflow/class-creative-manager.php:674
+#: inc/Workflow/class-creative-manager.php:683
 msgid "The creative could not be removed. Please try again."
 msgstr ""
 "Das Werbemittel konnte nicht entfernt werden. Bitte versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:317
-#: inc/Workflow/class-creative-manager.php:674
+#: inc/Portal/class-creative-feedback.php:319
+#: inc/Workflow/class-creative-manager.php:680
 msgid ""
 "The creative record and file could not be reconciled. Please contact an "
 "administrator."
@@ -5518,16 +5560,17 @@ msgstr ""
 "Der Werbemittel-Datensatz und die Datei konnten nicht abgeglichen werden. "
 "Bitte wenden Sie sich an einen Administrator."
 
-#: inc/Portal/class-creative-feedback.php:318
-#: inc/Portal/class-creative-feedback.php:359
-#: inc/Workflow/class-creative-manager.php:234
-#: inc/Workflow/class-creative-manager.php:278
+#: inc/Portal/class-creative-feedback.php:320
+#: inc/Portal/class-creative-feedback.php:361
+#: inc/Workflow/class-creative-manager.php:235
+#: inc/Workflow/class-creative-manager.php:280
+#: inc/Workflow/class-image-handler.php:156
 msgid "The creative could not be saved. Please try again."
 msgstr ""
 "Das Werbemittel konnte nicht gespeichert werden. Bitte versuchen Sie es "
 "erneut."
 
-#: inc/Portal/class-creative-feedback.php:319
+#: inc/Portal/class-creative-feedback.php:321
 #: inc/Workflow/class-creative-copies.php:89
 #, fuzzy
 msgid "That ad's file could not be read. Upload it to this size instead."
@@ -5535,14 +5578,14 @@ msgstr ""
 "Dieser Anteil konnte nicht gespeichert werden. Laden Sie die Seite neu und "
 "versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:339
+#: inc/Portal/class-creative-feedback.php:341
 #, fuzzy
 msgid "That ad is not delivering yet, so it has no share to set."
 msgstr ""
 "Dieses Werbemittel wird noch nicht ausgeliefert, daher gibt es keinen Anteil "
 "einzustellen."
 
-#: inc/Portal/class-creative-feedback.php:340
+#: inc/Portal/class-creative-feedback.php:342
 #: inc/Workflow/class-share-editor.php:155
 #, fuzzy
 msgid "Those shares could not be saved. Reload the page and try again."
@@ -5551,12 +5594,12 @@ msgstr ""
 "versuchen Sie es erneut."
 
 #. translators: 1: lowest permitted share, 2: highest permitted share.
-#: inc/Portal/class-creative-feedback.php:343
+#: inc/Portal/class-creative-feedback.php:345
 #, php-format
 msgid "A share must be between %1$d and %2$d."
 msgstr "Ein Anteil muss zwischen %1$d und %2$d liegen."
 
-#: inc/Portal/class-creative-feedback.php:348
+#: inc/Portal/class-creative-feedback.php:350
 #: inc/Workflow/class-share-editor.php:93
 #: inc/Workflow/class-share-editor.php:121
 msgid "That creative is not delivering yet, so it has no share to set."
@@ -5564,24 +5607,24 @@ msgstr ""
 "Dieses Werbemittel wird noch nicht ausgeliefert, daher gibt es keinen Anteil "
 "einzustellen."
 
-#: inc/Portal/class-creative-feedback.php:349
+#: inc/Portal/class-creative-feedback.php:351
 msgid "That share could not be saved. Reload the page and try again."
 msgstr ""
 "Dieser Anteil konnte nicht gespeichert werden. Laden Sie die Seite neu und "
 "versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:350
+#: inc/Portal/class-creative-feedback.php:352
 #: inc/Workflow/class-creative-change-manager.php:286
 msgid "Only a scheduled or live campaign can apply an ad update."
 msgstr ""
 "Nur eine geplante oder laufende Kampagne kann eine Werbeanpassung anwenden."
 
-#: inc/Portal/class-creative-feedback.php:351
+#: inc/Portal/class-creative-feedback.php:353
 #: inc/Workflow/class-creative-change-manager.php:475
 msgid "That ad update is no longer available."
 msgstr "Die Aktualisierung dieser Anzeige ist nicht mehr verfügbar."
 
-#: inc/Portal/class-creative-feedback.php:352
+#: inc/Portal/class-creative-feedback.php:354
 #: inc/Workflow/class-creative-change-manager.php:133
 #: inc/Workflow/class-creative-change-manager.php:238
 msgid "The ad update could not be saved. Please try again."
@@ -5589,32 +5632,32 @@ msgstr ""
 "Die Aktualisierung der Anzeige konnte nicht gespeichert werden. Bitte "
 "versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:353
+#: inc/Portal/class-creative-feedback.php:355
 #: inc/Workflow/class-creative-change-manager.php:407
 msgid "The update file could not be removed. Please try again."
 msgstr ""
 "Die Update-Datei konnte nicht entfernt werden. Bitte versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:354
+#: inc/Portal/class-creative-feedback.php:356
 #: inc/Workflow/class-creative-change-manager.php:343
 msgid "Explain why this ad update needs changes."
 msgstr ""
 "Erklären Sie, warum diese Aktualisierung des Werbemittels Änderungen "
 "benötigt."
 
-#: inc/Portal/class-creative-feedback.php:355
+#: inc/Portal/class-creative-feedback.php:357
 #: inc/Workflow/class-creative-change-manager.php:347
 msgid "Use 2,000 characters or fewer for update feedback."
 msgstr "Verwenden Sie maximal 2.000 Zeichen für das Update-Feedback."
 
-#: inc/Portal/class-creative-feedback.php:356
+#: inc/Portal/class-creative-feedback.php:358
 #: inc/Workflow/class-creative-change-manager.php:364
 msgid "The update decision could not be saved. Please try again."
 msgstr ""
 "Die Aktualisierungsentscheidung konnte nicht gespeichert werden. Bitte "
 "versuchen Sie es erneut."
 
-#: inc/Portal/class-creative-feedback.php:357
+#: inc/Portal/class-creative-feedback.php:359
 #: inc/Workflow/class-creative-change-manager.php:413
 msgid ""
 "The update record and file could not be reconciled. Please contact an "
@@ -5623,7 +5666,7 @@ msgstr ""
 "Der Aktualisierungsdatensatz und die Datei konnten nicht abgeglichen werden. "
 "Bitte wenden Sie sich an einen Administrator."
 
-#: inc/Portal/class-creative-feedback.php:358
+#: inc/Portal/class-creative-feedback.php:360
 #: inc/Workflow/class-creative-change-manager.php:112
 msgid "Change the destination or description before requesting an update."
 msgstr ""
@@ -6028,6 +6071,13 @@ msgstr ""
 "Die Kampagnenübersichten konnten nicht geladen werden. Bitte versuchen Sie "
 "es erneut."
 
+#: inc/Repository/class-creative-attachment-repository.php:69
+#: inc/Repository/class-creative-attachment-repository.php:82
+#: inc/Workflow/class-creative-promoter.php:78
+#: inc/Workflow/class-creative-promoter.php:85
+msgid "The image set could not be published. Please try again."
+msgstr "Der Bildsatz konnte nicht veröffentlicht werden. Bitte versuchen Sie es erneut."
+
 #: inc/Repository/class-inventory-availability-repository.php:122
 msgid ""
 "Availability could not be checked. Please try again or ask the publisher."
@@ -6125,7 +6175,7 @@ msgid "That advertiser could not be found."
 msgstr "Dieser Werbetreibende konnte nicht gefunden werden."
 
 #: inc/REST/class-campaigns-controller.php:500
-#: inc/REST/class-creative-file-controller.php:375
+#: inc/REST/class-creative-file-controller.php:414
 #: inc/REST/class-line-items-controller.php:366
 #: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
@@ -6145,12 +6195,12 @@ msgstr ""
 msgid "That conversion could not be recorded."
 msgstr "Diese Conversion konnte nicht erfasst werden."
 
-#: inc/REST/class-creative-file-controller.php:240
+#: inc/REST/class-creative-file-controller.php:274
 #, fuzzy
 msgid "Preview unavailable"
 msgstr "Auslieferungszahlen nicht verfügbar"
 
-#: inc/REST/class-creative-file-controller.php:258
+#: inc/REST/class-creative-file-controller.php:292
 msgid "Advertisement preview"
 msgstr "Anzeigenvorschau"
 
@@ -6803,7 +6853,7 @@ msgstr "Enddatum"
 msgid "Open-ended"
 msgstr "Offen"
 
-#: inc/Workflow/class-campaign-copier.php:255
+#: inc/Workflow/class-campaign-copier.php:260
 #: inc/Workflow/class-campaign-editor.php:161
 msgid "Untitled campaign"
 msgstr "Unbenannte Kampagne"
@@ -6917,48 +6967,48 @@ msgstr ""
 "ausgewählt hat."
 
 #. translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300.
-#: inc/Workflow/class-campaign-validator.php:215
+#: inc/Workflow/class-campaign-validator.php:218
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s."
 msgstr "Hochgeladen: %1$s. Erforderlich: %2$s."
 
-#: inc/Workflow/class-campaign-validator.php:221
+#: inc/Workflow/class-campaign-validator.php:224
 msgid "Every creative needs a destination URL."
 msgstr "Jedes Werbemittel benötigt eine Ziel-URL."
 
-#: inc/Workflow/class-campaign-validator.php:224
+#: inc/Workflow/class-campaign-validator.php:227
 msgid "A destination URL is not a valid http or https address."
 msgstr "Eine Ziel-URL ist keine gültige http- oder https-Adresse."
 
-#: inc/Workflow/class-campaign-validator.php:245
+#: inc/Workflow/class-campaign-validator.php:248
 msgid "This organization cannot submit campaigns. Please get in touch."
 msgstr ""
 "Diese Organisation kann keine Kampagnen einreichen. Bitte nehmen Sie Kontakt "
 "auf."
 
-#: inc/Workflow/class-campaign-validator.php:248
+#: inc/Workflow/class-campaign-validator.php:251
 msgid "This campaign is not connected to an organization. Please get in touch."
 msgstr ""
 "Diese Kampagne ist keiner Organisation zugeordnet. Bitte nehmen Sie Kontakt "
 "auf."
 
-#: inc/Workflow/class-campaign-validator.php:251
+#: inc/Workflow/class-campaign-validator.php:254
 msgid "Choose a package before submitting."
 msgstr "Wählen Sie vor dem Absenden ein Paket."
 
-#: inc/Workflow/class-campaign-validator.php:254
+#: inc/Workflow/class-campaign-validator.php:257
 msgid "The package on this campaign is no longer offered. Choose another one."
 msgstr ""
 "Das Paket dieser Kampagne wird nicht mehr angeboten. Wählen Sie ein anderes "
 "aus."
 
-#: inc/Workflow/class-campaign-validator.php:257
+#: inc/Workflow/class-campaign-validator.php:260
 msgid "This campaign has no price recorded. Choose its package again."
 msgstr ""
 "Für diese Kampagne ist kein Preis hinterlegt. Wählen Sie das Paket erneut "
 "aus."
 
-#: inc/Workflow/class-campaign-validator.php:260
+#: inc/Workflow/class-campaign-validator.php:263
 msgid "This campaign is not ready to submit."
 msgstr "Diese Kampagne ist nicht bereit zur Einreichung."
 
@@ -7042,33 +7092,33 @@ msgstr ""
 msgid "That conversion definition is not valid."
 msgstr "Diese Konversionsdefinition ist nicht gültig."
 
-#: inc/Workflow/class-creative-approval.php:96
+#: inc/Workflow/class-creative-approval.php:98
 msgid "You do not have permission to publish creative."
 msgstr "Sie haben keine Berechtigung, Werbemittel zu veröffentlichen."
 
-#: inc/Workflow/class-creative-approval.php:106
-#: inc/Workflow/class-creative-approval.php:226
+#: inc/Workflow/class-creative-approval.php:108
+#: inc/Workflow/class-creative-approval.php:229
 msgid "That creative no longer exists."
 msgstr "Dieses Werbemittel existiert nicht mehr."
 
-#: inc/Workflow/class-creative-approval.php:119
-#: inc/Workflow/class-creative-approval.php:234
+#: inc/Workflow/class-creative-approval.php:121
+#: inc/Workflow/class-creative-approval.php:237
 msgid "That creative is not waiting to be published."
 msgstr "Dieses Werbemittel wartet nicht auf die Veröffentlichung."
 
-#: inc/Workflow/class-creative-approval.php:198
+#: inc/Workflow/class-creative-approval.php:201
 msgid "You do not have permission to review creative."
 msgstr "Sie haben keine Berechtigung, das Werbemittel zu prüfen."
 
-#: inc/Workflow/class-creative-approval.php:208
+#: inc/Workflow/class-creative-approval.php:211
 msgid "Explain why this advertisement is not being published."
 msgstr "Erklären Sie, warum diese Anzeige nicht veröffentlicht wird."
 
-#: inc/Workflow/class-creative-approval.php:216
+#: inc/Workflow/class-creative-approval.php:219
 msgid "Use 2,000 characters or fewer for this explanation."
 msgstr "Verwenden Sie für diese Beschreibung maximal 2.000 Zeichen."
 
-#: inc/Workflow/class-creative-approval.php:244
+#: inc/Workflow/class-creative-approval.php:247
 msgid "That decision could not be saved. Please try again."
 msgstr ""
 "Diese Entscheidung konnte nicht gespeichert werden. Bitte versuchen Sie es "
@@ -7155,39 +7205,39 @@ msgstr ""
 "Entfernen Sie eines, bevor Sie ein weiteres hochladen."
 
 #. translators: 1: uploaded dimensions. 2: required dimensions.
-#: inc/Workflow/class-creative-manager.php:179
-#: inc/Workflow/class-creative-manager.php:465
+#: inc/Workflow/class-creative-manager.php:180
+#: inc/Workflow/class-creative-manager.php:470
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s. Resize the ad creative and try again."
 msgstr ""
 "Hochgeladen: %1$s. Erforderlich: %2$s. Passen Sie die Größe des Werbemittels "
 "an und versuchen Sie es erneut."
 
-#: inc/Workflow/class-creative-manager.php:382
+#: inc/Workflow/class-creative-manager.php:384
 msgid "Advertisement"
 msgstr "Anzeige"
 
 #. translators: %s: destination website hostname.
-#: inc/Workflow/class-creative-manager.php:385
+#: inc/Workflow/class-creative-manager.php:387
 #, php-format
 msgid "Advertisement linking to %s"
 msgstr "Anzeige mit Link zu %s"
 
-#: inc/Workflow/class-creative-manager.php:763
+#: inc/Workflow/class-creative-manager.php:769
 msgid "That placement is not available."
 msgstr "Diese Platzierung ist nicht verfügbar."
 
-#: inc/Workflow/class-creative-manager.php:767
+#: inc/Workflow/class-creative-manager.php:773
 msgid "That placement is not part of this campaign."
 msgstr "Diese Platzierung ist nicht Teil dieser Kampagne."
 
-#: inc/Workflow/class-creative-promoter.php:89
-#: inc/Workflow/class-creative-promoter.php:278
+#: inc/Workflow/class-creative-promoter.php:113
+#: inc/Workflow/class-creative-promoter.php:304
 msgid "This creative has no file to publish."
 msgstr "Dieses Werbemittel hat keine Datei zum Veröffentlichen."
 
-#: inc/Workflow/class-creative-promoter.php:102
-#: inc/Workflow/class-creative-promoter.php:124
+#: inc/Workflow/class-creative-promoter.php:126
+#: inc/Workflow/class-creative-promoter.php:148
 msgid ""
 "This creative’s file could not be read, so it has not been published. Its "
 "stored copy may be damaged, or the site’s creative encryption key may have "
@@ -7198,7 +7248,7 @@ msgstr ""
 "der Verschlüsselungsschlüssel für Werbemittel der Website könnte sich "
 "geändert haben."
 
-#: inc/Workflow/class-creative-promoter.php:111
+#: inc/Workflow/class-creative-promoter.php:135
 msgid ""
 "This creative’s file has changed since it was reviewed, so it has not been "
 "published."
@@ -7206,24 +7256,24 @@ msgstr ""
 "Die Datei dieses Werbemittels hat sich seit der Prüfung geändert, daher "
 "wurde es nicht veröffentlicht."
 
-#: inc/Workflow/class-creative-promoter.php:147
+#: inc/Workflow/class-creative-promoter.php:171
 msgid "This creative could not be linked to its Media Library file."
 msgstr ""
 "Dieses Werbemittel konnte nicht mit der Datei in der Medienbibliothek "
 "verknüpft werden."
 
-#: inc/Workflow/class-creative-promoter.php:214
+#: inc/Workflow/class-creative-promoter.php:238
 msgid ""
 "The Media Library is not writable, so this creative could not be published."
 msgstr ""
 "Die Mediabibliothek ist nicht beschreibbar, daher konnte dieses Werbemittel "
 "nicht veröffentlicht werden."
 
-#: inc/Workflow/class-creative-promoter.php:231
+#: inc/Workflow/class-creative-promoter.php:255
 msgid "This creative could not be copied into the Media Library."
 msgstr "Dieses Werbemittel konnte nicht in die Mediathek kopiert werden."
 
-#: inc/Workflow/class-creative-promoter.php:285
+#: inc/Workflow/class-creative-promoter.php:311
 msgid "This creative’s file could not be found."
 msgstr "Die Datei dieses Werbemittels konnte nicht gefunden werden."
 
@@ -7273,6 +7323,10 @@ msgstr "Der Upload wurde nicht abgeschlossen. Bitte versuchen Sie es erneut."
 #: inc/Workflow/class-email-change.php:110
 msgid "The confirmation email could not be sent."
 msgstr "Die Bestätigungsemail konnte nicht gesendet werden."
+
+#: inc/Workflow/class-image-publication.php:200
+msgid "The image set could not be verified and published. Please try again."
+msgstr "Der Bildsatz konnte nicht überprüft und veröffentlicht werden. Bitte versuchen Sie es erneut."
 
 #: inc/Workflow/class-line-item-editor.php:50
 msgid "The campaign delivery strategy could not be created."
@@ -8077,7 +8131,7 @@ msgstr "Prüfteam fragen"
 
 #: templates/portal/partials/campaign-changes.php:384
 #: templates/portal/partials/campaign-order-summary.php:100
-#: templates/portal/partials/campaign-overlays.php:359
+#: templates/portal/partials/campaign-overlays.php:364
 #: templates/portal/partials/campaign-review-step.php:381
 msgid "Submit for review"
 msgstr "Zur Prüfung einreichen"
@@ -8462,7 +8516,7 @@ msgid "Custom run dates"
 msgstr "Eigene Laufzeiten"
 
 #: templates/portal/partials/campaign-overlays.php:242
-#: templates/portal/partials/campaign-variant-artwork.php:81
+#: templates/portal/partials/campaign-variant-artwork.php:86
 msgid "Replace artwork"
 msgstr "Werbemittel ersetzen"
 
@@ -8500,7 +8554,7 @@ msgid "Replacement ad creative (optional)"
 msgstr "Ersatz-Werbemittel (optional)"
 
 #. translators: 1: required creative dimensions, for example 728x90. 2: the accepted image formats, e.g. JPEG, PNG, GIF.
-#: templates/portal/partials/campaign-overlays.php:338
+#: templates/portal/partials/campaign-overlays.php:343
 #, fuzzy, php-format
 msgid "Exactly %1$s. %2$s. Leave this empty to change only the destination."
 msgstr ""
@@ -8553,6 +8607,19 @@ msgstr ""
 #, fuzzy
 msgid "02 · Schedule"
 msgstr "Zeitplan"
+
+#: templates/portal/partials/campaign-renditions.php:31
+msgid "Responsive renditions (optional)"
+msgstr "Responsive Bildvarianten (optional)"
+
+#. translators: %s: supported image sizes, e.g. 320x50, 728x90.
+#: templates/portal/partials/campaign-renditions.php:36
+#, php-format
+msgid ""
+"Add up to five different sizes from: %s. Include the base image above. Each "
+"file must meet the placement limit; all images together must be at most 2 "
+"MB. Review covers the whole set."
+msgstr "Fügen Sie bis zu fünf unterschiedliche Größen aus dieser Liste hinzu: %s. Verwenden Sie oben das Basisbild. Jede Datei muss das Limit der Platzierung einhalten; alle Bilder zusammen dürfen höchstens 2 MB groß sein. Geprüft wird der gesamte Satz."
 
 #: templates/portal/partials/campaign-reports.php:58
 msgid "Open campaign"
@@ -8987,59 +9054,65 @@ msgstr "Paket speichern"
 msgid "Ad update history"
 msgstr "Änderungsverlauf der Werbung"
 
-#: templates/portal/partials/campaign-upload-form.php:78
+#: templates/portal/partials/campaign-upload-form.php:80
+msgid ""
+"Choose the base image and any optional renditions, then select Upload "
+"creative."
+msgstr "Wählen Sie das Basisbild und gegebenenfalls Bildvarianten aus und klicken Sie dann auf Werbemittel hochladen."
+
+#: templates/portal/partials/campaign-upload-form.php:82
 msgid ""
 "Uploads by itself: choose a file, enter its link, and the upload starts when "
 "you leave the link field."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:79
+#: templates/portal/partials/campaign-upload-form.php:83
 msgid ""
 "Uploads as soon as you choose a file, linking to the address below unless "
 "you change it first."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:85
+#: templates/portal/partials/campaign-upload-form.php:89
 msgid "Ad creative file"
 msgstr "Werbemitteldatei"
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: templates/portal/partials/campaign-upload-form.php:90
+#: templates/portal/partials/campaign-upload-form.php:94
 #, fuzzy, php-format
 msgid "Maximum file size: %s."
 msgstr "Maximale Dateigröße (KB)"
 
-#: templates/portal/partials/campaign-upload-form.php:121
+#: templates/portal/partials/campaign-upload-form.php:125
 #, fuzzy
 msgid "Uploading"
 msgstr "Hochgeladen"
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:126
+#: templates/portal/partials/campaign-upload-form.php:130
 #, php-format
 msgid "Upload progress for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:129
+#: templates/portal/partials/campaign-upload-form.php:133
 #, fuzzy
 msgid "Cancel upload"
 msgstr "Storniert"
 
-#: templates/portal/partials/campaign-upload-form.php:137
+#: templates/portal/partials/campaign-upload-form.php:141
 msgid "Download template"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:141
+#: templates/portal/partials/campaign-upload-form.php:145
 #, php-format
 msgid "for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:165
+#: templates/portal/partials/campaign-upload-form.php:169
 msgid "Use a different link"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:170
+#: templates/portal/partials/campaign-upload-form.php:174
 msgid ""
 "Where someone should go after selecting the advertisement. Use a complete "
 "http or https URL."
@@ -9047,7 +9120,7 @@ msgstr ""
 "Wohin der Nutzer nach Auswahl der Anzeige weitergeleitet werden soll. "
 "Verwenden Sie eine vollständige http- oder https-URL."
 
-#: templates/portal/partials/campaign-upload-form.php:177
+#: templates/portal/partials/campaign-upload-form.php:186
 msgid "Upload creative"
 msgstr "Werbemittel hochladen"
 
@@ -10668,6 +10741,13 @@ msgstr "Rotieren"
 msgctxt "block keyword"
 msgid "banner"
 msgstr "Banner"
+
+#~ msgid ""
+#~ "The image set could not be verified and published. Its previous approved "
+#~ "version remains unchanged. Please try again."
+#~ msgstr ""
+#~ "Der Bildsatz konnte nicht überprüft und veröffentlicht werden. Die zuvor "
+#~ "genehmigte Version bleibt unverändert. Bitte versuchen Sie es erneut."
 
 #~ msgid "Billing UI"
 #~ msgstr "Abrechnungs-UI"

@@ -47,6 +47,7 @@ final class Creative_Approval {
 	 * @param Fill_Cache                     $cache       Delivery cache.
 	 * @param Audit_Repository               $audit       Audit persistence.
 	 * @param Creative_Decision_Repository   $decisions   What was decided about a revision, for the screens that show it.
+	 * @param Assigned_Creatives             $assigned    Canonical assignment creation, including API-only uploads.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -56,7 +57,8 @@ final class Creative_Approval {
 		private readonly Assignment_Projection $projection,
 		private readonly Fill_Cache $cache,
 		private readonly Audit_Repository $audit,
-		private readonly Creative_Decision_Repository $decisions
+		private readonly Creative_Decision_Repository $decisions,
+		private readonly Assigned_Creatives $assigned
 	) {
 	}
 
@@ -136,6 +138,7 @@ final class Creative_Approval {
 		 * ineligible — which is the same stale-snapshot fault that stopped
 		 * delivery working at all until `Assignment_Projection` existed.
 		 */
+		$this->assigned->revision_ids( $campaign_id );
 		$this->projection->project( $campaign_id );
 
 		$this->campaigns->set_pending_creative_count(

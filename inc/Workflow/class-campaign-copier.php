@@ -209,20 +209,25 @@ final class Campaign_Copier {
 				return $this->failed( $campaign_id );
 			}
 
-			$this->creatives->record_upload(
+			$saved = $this->creatives->record_upload(
 				$creative_id,
 				array(
-					'path'   => $stored['path'],
-					'token'  => $stored['token'],
-					'sha256' => $stored['sha256'],
-					'bytes'  => $stored['bytes'],
-					'mime'   => $file['mime'],
-					'width'  => $creative['width'],
-					'height' => $creative['height'],
-					'name'   => $file['name'],
+					'path'     => $stored['path'],
+					'token'    => $stored['token'],
+					'sha256'   => $stored['sha256'],
+					'bytes'    => $stored['bytes'],
+					'mime'     => $file['mime'],
+					'width'    => $creative['width'],
+					'height'   => $creative['height'],
+					'name'     => $file['name'],
+					'manifest' => $file['manifest'] ?? null,
 				)
 			);
 
+			if ( ! $saved ) {
+				$this->storage->delete( $stored['path'] );
+				return $this->failed( $campaign_id );
+			}
 			++$copied;
 		}
 

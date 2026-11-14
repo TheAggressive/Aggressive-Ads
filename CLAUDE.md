@@ -23,6 +23,7 @@ Studio instructions.
 | Layers, service registration and persistence boundaries | [Architecture](docs/architecture.md) |
 | Entities, ownership and lifecycle invariants | [Domain model](docs/domain-model.md), [campaign workflow](docs/campaign-workflow.md) |
 | Authorization and threats | [Roles and capabilities](docs/roles-and-capabilities.md), [SECURITY.md](SECURITY.md), [threat model](docs/threat-model.md) |
+| Creative formats, publication evidence and preview isolation | [P18 contract](docs/platform-p18-rich-creative-types.md) |
 | Suites, native database runner and browser setup | [Testing strategy](docs/testing-strategy.md) |
 | Toolchain, quality gates, packaging and release | [Build and release](docs/build-and-release.md), [package.json](package.json), [composer.json](composer.json) |
 | Remaining work and dependency order | [Roadmap](docs/roadmap.md), [work tracking](docs/work-tracking.md), GitHub Issues |

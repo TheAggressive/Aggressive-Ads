@@ -8,8 +8,83 @@
 - Authority: the supported runtime matrix and verification lanes in
   [build and release](build-and-release.md), including Chromium and WebKit.
 
-This defines future implementation and its acceptance requirements. It enables
-no format, changes no approval and records no phase exit evidence.
+This defines the phase contract and its acceptance requirements. Responsive
+image implementation is tracked in #374 and described below.
+HTML5, tags and video remain separate follow-ups (#375–#377). This is not phase
+exit evidence; script and external modes retain their browser/P27 gates.
+
+### Responsive image implementation
+
+The image handler accepts a required base raster and up to five optional
+`renditions[]` files through the existing authorized upload/replacement
+workflows. Sizes come from the placement's P15 map, including its stored base
+size. Every file passes the existing raster validator and placement limit;
+the set also has a 2 MiB aggregate limit. Each set remains one creative revision,
+one weighted candidate and one signed delivery identity.
+
+One encrypted, bounded source artifact holds the exact raster bytes. The
+revision's versioned JSON manifest binds every rendition's dimensions, MIME,
+length and checksum. Publication verifies the complete source before writing
+public files, creates real marked Media Library attachments for each member,
+and records a source-bound receipt. Partial publication removes only resources
+created by that attempt and preserves the private source for retry.
+
+The receipt includes a durable staff actor, timestamp and digest covering the
+revision, site/organization/parents, resources, destination and description.
+That proof is required before the assignment becomes eligible. Existing P17
+timeline/audit writers retain their existing failure semantics; their presence
+alone does not authorize image-set delivery. This keeps artifact approval
+evidence in the same committed receipt as publication without adding another
+approval workflow. A text revision preserves resource references but must
+receive a new proof for its new revision and text before serving.
+
+Assignment projection stores the format version, available size keys and the
+approved manifest hash. Candidate selection never loads every manifest: one
+bounded indexed read resolves the winning revision. Both single and batch fill
+use the same versioned image descriptor. Token consumption independently checks
+the current source/publication/review binding. Legacy images keep their existing
+attachment compatibility path; unknown/new malformed records fail closed.
+
+Private preview renders every rendition as an authorized raster in the existing
+empty sandbox. Copy/renew reconstruct the complete reviewed source after private
+purge; copying to another placement revalidates every member against its map.
+No archive ingestion, executable renderer or runtime dependency is introduced.
+
+The executable evidence for this slice lives in `ImageSetTest`,
+`ResponsiveImagesTest`, `ImageProjectionUpgradeTest`, `SiteScopedTenancyTest`,
+and the shared `responsive-images-cases.ts` browser cases for Chromium/WebKit.
+It covers actual upload → staff approval → assignment → single/batch fill,
+private/public rendition bytes, denied ownership/publication/nonces, independent
+database claims, compensation/retry, six-member and exact 2 MiB boundaries,
+real MySQL DDL failure/retry and 100-row migration batches. The 500-candidate
+fixture checks the existing 12 cold / 4 warm / 8 token-query ceilings, a 1 MiB
+candidate-cache ceiling and 16 KiB slot payload ceiling. These are checked
+fixture bounds, not a hosting-capacity certification.
+
+Removing token review binding, source serialization or member checksum guards
+made their regression tests fail. Removing renderer dispatch made all four
+unsupported-descriptor tests fail. Each guard was restored before verification.
+An additional real-workflow interleaving test completes a second replacement
+during the first upload's inspection; the stale writer is refused and the
+completed source survives. Removing the expected-source hash check makes that
+regression fail as well.
+Both real private-image REST routes also reject nested/malformed rendition
+query values; removing the declared size validation makes that regression fail.
+Persisted SQL NULL snapshots are malformed rather than legacy absence, and
+noncanonical metadata keys are refused before delivery. Removing the NULL-source
+guard makes the real database regression fail.
+The browser cases exercise explicit and scriptless ingestion, invalid nonce
+refusal, 320px reflow/axe, the unchanged empty sandbox, both served image sizes
+and one impression request per rendered page. Full CI remains required for the
+implementation PR; these tests do not qualify executable HTML5 or third-party
+network access.
+
+Local verification for this implementation passed the complete `qa:fast` gate,
+1,367 PHP unit tests, 2,069 native WordPress integration tests, 11 multisite
+tests, 227 JavaScript tests and 71 browser cases. Locked dependency audits found
+no new advisories. The Studio runner restored its disposable database/uploads;
+the working site's data was not used as a test fixture. GitHub's full CI and
+installed-artifact checks are separate merge requirements.
 
 ## Outcome and scope
 
@@ -29,7 +104,8 @@ P2 and [P17](platform-p17-creative-experience.md) are complete. Keep their revis
 ownership, variant, approval and measurement guarantees. PR #371's complete CI
 baseline is green; rerun the required baseline for each implementation head.
 
-The handler boundary is currently conceptual, not an implemented registry:
+The table records the P17 seams audited before #374. Responsive images now use
+the concrete handler above; a general provider registry is still outside P18:
 
 | Existing authority | P18 change required |
 |---|---|

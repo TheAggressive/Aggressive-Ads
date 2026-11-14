@@ -379,7 +379,7 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 
 		$this->creatives->record_upload( $creative_id, $accepted );
 
-		$promoter      = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
+		$promoter      = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage, new \Aggressive\Ads\Workflow\Image_Publication( $this->creatives, $this->attachments, new \Aggressive\Ads\Repository\Image_Resource_Repository(), $this->storage ) );
 		$attachment_id = $promoter->promote( $creative_id );
 
 		$this->assertIsInt( $attachment_id );
@@ -418,7 +418,7 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 
 		$this->creatives->record_upload( $creative_id, $accepted );
 
-		$promoter = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
+		$promoter = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage, new \Aggressive\Ads\Workflow\Image_Publication( $this->creatives, $this->attachments, new \Aggressive\Ads\Repository\Image_Resource_Repository(), $this->storage ) );
 		$result   = $promoter->promote( $creative_id );
 
 		$this->assertInstanceOf( WP_Error::class, $result );

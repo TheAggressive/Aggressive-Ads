@@ -455,6 +455,11 @@ final class Migration_Map {
 				$c->get( Report_Bucket_Repository::class )->install_table();
 				( new \Aggressive\Ads\Repository\Campaign_Report_Repository() )->verify_indexes();
 			},
+			35 => static function () use ( $c ): void {
+				$c->get( \Aggressive\Ads\Repository\Image_Projection_Repository::class )->install();
+				$c->get( \Aggressive\Ads\Install\Image_Projection_Migrator::class )->start();
+			},
+
 		);
 	}
 }

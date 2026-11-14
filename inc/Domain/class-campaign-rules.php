@@ -26,6 +26,7 @@ final class Campaign_Rules {
 	public const ERROR_CREATIVE_KIND       = 'creative_kind_not_allowed';
 	public const ERROR_CREATIVE_PLACEMENT  = 'creative_placement_not_selected';
 	public const ERROR_CREATIVE_SIZE       = 'creative_size_mismatch';
+	public const ERROR_IMAGE_SET           = 'aggr_image_set_invalid';
 	public const ERROR_CLICK_URL_MISSING   = 'click_url_missing';
 	public const ERROR_CLICK_URL_INVALID   = 'click_url_invalid';
 	public const ERROR_START_MISSING       = 'start_date_missing';
@@ -84,6 +85,7 @@ final class Campaign_Rules {
 			self::ERROR_CREATIVE_KIND,
 			self::ERROR_CREATIVE_PLACEMENT,
 			self::ERROR_CREATIVE_SIZE,
+			self::ERROR_IMAGE_SET,
 			self::ERROR_CLICK_URL_MISSING,
 			self::ERROR_CLICK_URL_INVALID   => 'artwork',
 			default                         => 'details',

@@ -37,7 +37,7 @@ final class Creative_Change_Manager {
 	 * @param Creative_Repository          $creatives Creative persistence.
 	 * @param Creative_Revision_Repository $revisions  Revision chain persistence.
 	 * @param Placement_Repository         $placements Placement persistence.
-	 * @param Creative_Uploader            $uploader   Hostile-file validation.
+	 * @param Image_Handler                $uploader   Hostile-file validation.
 	 * @param Private_Storage              $storage    Private file storage.
 	 * @param Rate_Limiter                 $limiter    Upload abuse bounding.
 	 * @param Ad_Provider_Interface        $provider   Public delivery projection.
@@ -48,7 +48,7 @@ final class Creative_Change_Manager {
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Placement_Repository $placements,
-		private readonly Creative_Uploader $uploader,
+		private readonly Image_Handler $uploader,
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
 		private readonly Ad_Provider_Interface $provider,
@@ -238,9 +238,9 @@ final class Creative_Change_Manager {
 				return $this->error( 'aggr_replacement_not_created', __( 'The ad update could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
-			$this->creatives->record_upload( $replacement_id, $this->upload_record( $accepted ) );
+			$saved = $this->creatives->record_upload( $replacement_id, $this->upload_record( $accepted ) );
 
-			if ( ! $this->replacement_was_recorded( $replacement_id, $creative_id, $accepted['path'] ) ) {
+			if ( ! $saved || ! $this->replacement_was_recorded( $replacement_id, $creative_id, $accepted['path'] ) ) {
 				$this->creatives->delete( $replacement_id );
 				$this->storage->delete( $accepted['path'] );
 
@@ -257,8 +257,8 @@ final class Creative_Change_Manager {
 				'placement_id' => $current['placement_id'],
 				'width'        => $accepted['width'],
 				'height'       => $accepted['height'],
-				'mime'         => $accepted['mime'],
-				'bytes'        => $accepted['bytes'],
+				'mime'         => Image_Handler::summary( $accepted )['mime'],
+				'bytes'        => Image_Handler::summary( $accepted )['bytes'],
 			);
 		} finally {
 			$this->revisions->release_change_lock( $creative_id, $lock );
@@ -508,7 +508,7 @@ final class Creative_Change_Manager {
 			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
-		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ), $this->placements->size( $placement_id ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ) );
 
 		if ( is_wp_error( $accepted ) ) {
 			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
@@ -552,19 +552,23 @@ final class Creative_Change_Manager {
 	 * Narrows a validated upload to the repository's exact persistence shape.
 	 *
 	 * @param array<string, mixed> $accepted Accepted upload plus workflow fields.
-	 * @return array{path: string, token: string, sha256: string, bytes: int, mime: string, width: int, height: int, name: string}
+	 * @return array{path:string,token:string,sha256:string,bytes:int,mime:string,width:int,height:int,name:string,manifest?:array<string,mixed>}
 	 */
 	private function upload_record( array $accepted ): array {
-		return array(
-			'path'   => (string) $accepted['path'],
-			'token'  => (string) $accepted['token'],
-			'sha256' => (string) $accepted['sha256'],
-			'bytes'  => (int) $accepted['bytes'],
-			'mime'   => (string) $accepted['mime'],
-			'width'  => (int) $accepted['width'],
-			'height' => (int) $accepted['height'],
-			'name'   => (string) $accepted['name'],
+		$upload = array(
+			'path'   => $accepted['path'],
+			'token'  => $accepted['token'],
+			'sha256' => $accepted['sha256'],
+			'bytes'  => $accepted['bytes'],
+			'mime'   => $accepted['mime'],
+			'width'  => $accepted['width'],
+			'height' => $accepted['height'],
+			'name'   => $accepted['name'],
 		);
+		if ( isset( $accepted['manifest'] ) && \Aggressive\Ads\Domain\Image_Set::valid( $accepted['manifest'] ) ) {
+			$upload['manifest'] = $accepted['manifest'];
+		}
+		return $upload;
 	}
 
 	/**

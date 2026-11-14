@@ -391,6 +391,23 @@ rebuilt idempotently from the retained organizations.
 
 ## Creative assets and assignments — P2
 
+Database version 35 adds `image_version` (unsigned tinyint, default 0),
+`image_sizes` (varchar(191), default empty) and `image_hash` (char(64), default
+empty) to assignments. Version 0 normalizes existing single-image rows through
+their attachment reader; version 1 requires a reviewed image-set manifest and
+receipt. Malformed source records project to an ineligible sentinel rather than
+being mistaken for legacy images. Historical ids, weights, windows, statuses
+and counters remain in place.
+
+Migration 35 qualifies the actual additive schema before committing its marker,
+then schedules `aggr_migrate_image_projection`. The site-scoped worker reads at
+most 100 primary-id-ordered rows, writes only the three derived image columns
+with an expected-revision condition, and persists progress only after success.
+The cursor, completion and bounded error code live in
+`aggr_image_projection_cursor`, `aggr_image_projection_done` and
+`aggr_image_projection_error`. Missing events are repaired during initialization.
+Legacy readers do not select missing new columns after a failed DDL step.
+
 Two tables, added at database version 14. **Empty on arrival**: nothing reads
 them yet, and the backfill that fills them ships with the code that reads them.
 That ordering is deliberate — a table filled in one release and read in another

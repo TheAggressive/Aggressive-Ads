@@ -222,6 +222,14 @@ export const fillSlot = async ( root, sequence = 0 ) => {
  */
 export const renderPayload = async ( root, payload ) => {
 	const creative = payload?.creative ?? payload?.house;
+	if (
+		creative &&
+		( creative.format !== undefined ||
+			creative.formatVersion !== undefined ) &&
+		( creative.format !== 'image' || creative.formatVersion !== 1 )
+	) {
+		return NOTHING;
+	}
 
 	if ( ! creative?.image || ! creative.click ) {
 		return NOTHING;

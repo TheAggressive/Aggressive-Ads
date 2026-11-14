@@ -373,6 +373,11 @@ final class Private_Storage {
 			return null;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPressVIPMinimum.Functions.RestrictedFunctions.chmod_chmod -- Core wp_tempnam() file, not a durable filesystem write; plaintext creative bytes must be owner-readable only before writing.
+		if ( ! chmod( $temp, 0600 ) ) {
+			wp_delete_file( $temp );
+			return null;
+		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Streaming a decrypt into a temporary file. WP_Filesystem would hold the whole creative in memory to do it.
 		$handle = fopen( $temp, 'wb' );
 

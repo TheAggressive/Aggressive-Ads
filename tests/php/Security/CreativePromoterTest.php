@@ -73,7 +73,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		$this->storage     = new Private_Storage();
 		$this->attachments = new Creative_Attachment_Repository();
 		$this->creatives   = new Creative_Repository( $this->attachments );
-		$this->promoter    = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
+		$this->promoter    = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage, new \Aggressive\Ads\Workflow\Image_Publication( $this->creatives, $this->attachments, new \Aggressive\Ads\Repository\Image_Resource_Repository(), $this->storage ) );
 	}
 
 	/**

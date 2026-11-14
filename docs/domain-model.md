@@ -143,18 +143,21 @@ write disappears with nothing reporting it.
 | `_aggr_filesize` | int | Bytes |
 | `_aggr_sha256` | string | 64 hex chars — proves at approval that this is the file that was reviewed |
 | `_aggr_click_url` | string | `http`/`https` only |
-| `_aggr_target_blank` | int | `0` \| `1` |
+| `_aggr_target_blank` | int | Legacy metadata. Native paid advertisements open a new tab. |
 | `_aggr_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
 | `_aggr_attachment_id` | int | `0` until approval |
+| `_aggr_image_source` | JSON | Versioned, bounded image-set manifest and authoritative private source facts; absent for legacy images. |
+| `_aggr_image_publication` | JSON | Site/parent/source-bound real resource references and durable staff approval proof for the complete revision. |
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
-| `_aggr_review_state` | enum | `pending` \| `approved` \| `replaced`. **Never `rejected`** — rejection is a campaign status, not a creative one. `replaced` is an approved revision a later one superseded |
+| `_aggr_review_state` | enum | `pending` \| `approved` \| `rejected` \| `replaced`. A creative decision is separate from its campaign's status. |
 
-**`_aggr_review_state` is not the approved signal, and has not been for a long
-time.** Promotion into the Media Library does not touch it — only the
-replacement path maintains it — so a creative that has been serving for weeks
-still reads `pending`. Anything asking "is this approved" must ask
-`Creative_Attachment_Repository::has_attachment()` instead, which is the honest
-question: having an attachment is what approval actually produces.
+The queue flag and publication evidence serve different readers. Legacy
+coverage retains its review-state policy, while publication/freeze checks use
+its real attachment. Image sets require `Image_Resource_Repository::ready()`:
+the complete source, receipt, parentage and current text must match the durable
+staff approval proof. Neither a queue flag nor an attachment alone makes an
+image set eligible. Placement policy is revalidated before publishing a queued
+set, so a map or file-limit edit cannot approve stale ingestion assumptions.
 
 ### Creative Asset and Creative Assignment — custom tables
 
@@ -176,7 +179,8 @@ authority, and every write site asks it rather than testing a status itself.
 
 A revision whose bytes are unchanged is classified `text_only` and gets a
 one-line diff review instead of the full creative screen. The classification is
-derived server-side from comparing two SHA-256 checksums and **is never
+derived server-side from comparing the source hashes and, for sets, the entire
+canonical rendition manifest. It **is never
 client-supplied** — that is the property that keeps it a review lane rather than
 an exemption from review.
 

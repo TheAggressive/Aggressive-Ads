@@ -186,21 +186,25 @@ final class Creative_Assignment_Migrator implements Service {
 			$this->creatives->title( $root )
 		);
 
+		$image_fields = ( new \Aggressive\Ads\Repository\Image_Projection_Repository() )->available() ? ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->projection( $creative_id ) : array();
 		return $this->assignments->ensure(
-			array(
-				'line_item_id'    => (int) $line_item['id'],
-				'campaign_id'     => $campaign_id,
-				'organization_id' => (int) ( $details['org_id'] ?? 0 ),
-				'asset_id'        => $asset,
-				'revision_id'     => $creative_id,
-				'placement_id'    => $placement_id,
-				'status'          => Assignment_Rules::status_for_campaign( $this->campaigns->status( $campaign_id ) ),
-				'click_url'       => (string) ( $details['click_url'] ?? '' ),
-				'alt_text'        => (string) ( $details['alt_text'] ?? '' ),
-				'width'           => (int) ( $details['width'] ?? 0 ),
-				'height'          => (int) ( $details['height'] ?? 0 ),
-				// `details()` does not carry this; the repository has its own accessor.
-				'attachment_id'   => $this->attachments->attachment_id( $creative_id ),
+			array_merge(
+				$image_fields,
+				array(
+					'line_item_id'    => (int) $line_item['id'],
+					'campaign_id'     => $campaign_id,
+					'organization_id' => (int) ( $details['org_id'] ?? 0 ),
+					'asset_id'        => $asset,
+					'revision_id'     => $creative_id,
+					'placement_id'    => $placement_id,
+					'status'          => Assignment_Rules::status_for_campaign( $this->campaigns->status( $campaign_id ) ),
+					'click_url'       => (string) ( $details['click_url'] ?? '' ),
+					'alt_text'        => (string) ( $details['alt_text'] ?? '' ),
+					'width'           => (int) ( $details['width'] ?? 0 ),
+					'height'          => (int) ( $details['height'] ?? 0 ),
+					// `details()` does not carry this; the repository has its own accessor.
+					'attachment_id'   => $this->attachments->attachment_id( $creative_id ),
+				)
 			)
 		);
 	}

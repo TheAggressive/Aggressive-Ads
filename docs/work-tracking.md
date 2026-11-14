@@ -66,7 +66,7 @@ operations and documentation as applicable.
 | Phase | Tracking issue | Notes |
 |---|---:|---|
 | P17 Creative experience | #260 | Closed 2026-09-22. Four slices built. |
-| P18 Rich creative types | #262 | [Detailed contract](platform-p18-rich-creative-types.md); implement responsive images first. Script/external modes retain browser/P27 gates. |
+| P18 Rich creative types | #262 | [Detailed contract](platform-p18-rich-creative-types.md); responsive image slice #374, followed by #375–#377. Script/external modes retain browser/P27 gates. |
 | P19 Billing domain | #263 | Authoritative commercial model for later workflow/revenue work. |
 | P20 Publisher workflow | #264 | Blocked on P19 for renewals/make-goods with commercial meaning. |
 | P21 Organization RBAC | #265 | Replaces the one-org-per-user invariant. |

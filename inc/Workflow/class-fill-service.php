@@ -229,9 +229,7 @@ final class Fill_Service {
 			if ( null !== $decision && $decision['result']->has_winner() && is_array( $decision['result']->winner ) ) {
 				$winner = $decision['result']->winner;
 
-				$this->decisions->record_delivery( $winner, $now, $facts );
-
-				$paid = $this->decisions->payload_from_row( $winner, $placement_id );
+				$paid = $this->decisions->payload_from_row( $winner, $placement_id, $info['size'] );
 
 				/*
 				 * **The same field the per-slot route sends, on the route that
@@ -251,6 +249,7 @@ final class Fill_Service {
 				 * whether both writers write it.
 				 */
 				if ( is_array( $paid ) ) {
+					$this->decisions->record_delivery( $winner, $now, $facts );
 					$paid['servable'] = (int) ( $decision['servable'] ?? 0 );
 				}
 			}
@@ -353,13 +352,12 @@ final class Fill_Service {
 
 		$winner = $decision['result']->winner;
 
-		$this->decisions->record_delivery( $winner, $now, $facts );
-
-		$payload = $this->decisions->payload_from_row( $winner, $placement_id );
+		$payload = $this->decisions->payload_from_row( $winner, $placement_id, (string) ( $facts['size'] ?? '' ) );
 
 		if ( null === $payload ) {
 			return null;
 		}
+		$this->decisions->record_delivery( $winner, $now, $facts );
 
 		/*
 		 * **Carried on the payload rather than kept on the service.** A

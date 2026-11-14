@@ -21,17 +21,19 @@ use Aggressive\Ads\Core\Post_Types;
  */
 final class Creative_Repository {
 
-	public const META_CAMPAIGN_ID   = '_aggr_campaign_id';
-	public const META_ORG_ID        = '_aggr_org_id';
-	public const META_PLACEMENT_ID  = '_aggr_placement_id';
-	public const META_SIZE          = '_aggr_size';
-	public const META_KIND          = '_aggr_kind';
-	public const META_WIDTH         = '_aggr_width';
-	public const META_HEIGHT        = '_aggr_height';
-	public const META_CLICK_URL     = '_aggr_click_url';
-	public const META_ALT_TEXT      = '_aggr_alt_text';
-	public const META_REVIEW_STATE  = '_aggr_review_state';
-	public const META_ATTACHMENT_ID = '_aggr_attachment_id';
+	public const META_CAMPAIGN_ID       = '_aggr_campaign_id';
+	public const META_ORG_ID            = '_aggr_org_id';
+	public const META_PLACEMENT_ID      = '_aggr_placement_id';
+	public const META_SIZE              = '_aggr_size';
+	public const META_KIND              = '_aggr_kind';
+	public const META_WIDTH             = '_aggr_width';
+	public const META_HEIGHT            = '_aggr_height';
+	public const META_CLICK_URL         = '_aggr_click_url';
+	public const META_ALT_TEXT          = '_aggr_alt_text';
+	public const META_REVIEW_STATE      = '_aggr_review_state';
+	public const META_ATTACHMENT_ID     = '_aggr_attachment_id';
+	public const META_IMAGE_SOURCE      = '_aggr_image_source';
+	public const META_IMAGE_PUBLICATION = '_aggr_image_publication';
 
 	/**
 	 * Set on the attachment itself, marking it as delivered advertising.
@@ -137,6 +139,12 @@ final class Creative_Repository {
 			return null;
 		}
 
+		$source = ( new Image_Resource_Repository() )->source( $creative_id );
+		if ( false === $source ) {
+			return null;
+		}
+		$upload = is_array( $source ) ? $source['upload'] : array();
+
 		return array(
 			'id'           => $creative_id,
 			'campaign_id'  => (int) get_post_meta( $creative_id, self::META_CAMPAIGN_ID, true ),
@@ -144,8 +152,8 @@ final class Creative_Repository {
 			'placement_id' => (int) get_post_meta( $creative_id, self::META_PLACEMENT_ID, true ),
 			'size'         => (string) get_post_meta( $creative_id, self::META_SIZE, true ),
 			'kind'         => (string) get_post_meta( $creative_id, self::META_KIND, true ),
-			'width'        => (int) get_post_meta( $creative_id, self::META_WIDTH, true ),
-			'height'       => (int) get_post_meta( $creative_id, self::META_HEIGHT, true ),
+			'width'        => $upload['width'] ?? (int) get_post_meta( $creative_id, self::META_WIDTH, true ),
+			'height'       => $upload['height'] ?? (int) get_post_meta( $creative_id, self::META_HEIGHT, true ),
 			'click_url'    => (string) get_post_meta( $creative_id, self::META_CLICK_URL, true ),
 			'alt_text'     => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
 		);
@@ -162,13 +170,20 @@ final class Creative_Repository {
 			return null;
 		}
 
+		$source = ( new Image_Resource_Repository() )->source( $creative_id );
+		if ( false === $source ) {
+			return null;
+		}
+		$upload = is_array( $source ) ? $source['upload'] : array();
+
 		return array(
-			'path'     => (string) get_post_meta( $creative_id, self::META_PRIVATE_PATH, true ),
-			'sha256'   => (string) get_post_meta( $creative_id, self::META_SHA256, true ),
-			'mime'     => (string) get_post_meta( $creative_id, self::META_MIME, true ),
+			'path'     => $upload['path'] ?? (string) get_post_meta( $creative_id, self::META_PRIVATE_PATH, true ),
+			'sha256'   => $upload['sha256'] ?? (string) get_post_meta( $creative_id, self::META_SHA256, true ),
+			'mime'     => $upload['mime'] ?? (string) get_post_meta( $creative_id, self::META_MIME, true ),
 			'alt_text' => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
-			'name'     => (string) get_post_meta( $creative_id, self::META_ORIGINAL_NAME, true ),
-			'bytes'    => (int) get_post_meta( $creative_id, self::META_FILESIZE, true ),
+			'name'     => $upload['name'] ?? (string) get_post_meta( $creative_id, self::META_ORIGINAL_NAME, true ),
+			'manifest' => is_array( $source ) ? $source['manifest'] : null,
+			'bytes'    => $upload['bytes'] ?? (int) get_post_meta( $creative_id, self::META_FILESIZE, true ),
 		);
 	}
 
@@ -180,17 +195,10 @@ final class Creative_Repository {
 	 *
 	 * @param int                                                                                                                 $creative_id Creative post id.
 	 * @param array{path: string, token: string, sha256: string, bytes: int, mime: string, width: int, height: int, name: string} $upload      Accepted upload.
-	 * @return void
+	 * @return bool Whether the authoritative source was saved.
 	 */
-	public function record_upload( int $creative_id, array $upload ): void {
-		update_post_meta( $creative_id, self::META_PRIVATE_PATH, $upload['path'] );
-		update_post_meta( $creative_id, self::META_PRIVATE_TOKEN, $upload['token'] );
-		update_post_meta( $creative_id, self::META_SHA256, $upload['sha256'] );
-		update_post_meta( $creative_id, self::META_FILESIZE, $upload['bytes'] );
-		update_post_meta( $creative_id, self::META_MIME, $upload['mime'] );
-		update_post_meta( $creative_id, self::META_WIDTH, $upload['width'] );
-		update_post_meta( $creative_id, self::META_HEIGHT, $upload['height'] );
-		update_post_meta( $creative_id, self::META_ORIGINAL_NAME, $upload['name'] );
+	public function record_upload( int $creative_id, array $upload ): bool {
+		return ( new Image_Resource_Repository() )->record_upload( $creative_id, $upload );
 	}
 
 	/**
@@ -360,6 +368,10 @@ final class Creative_Repository {
 	 * @return bool
 	 */
 	public function is_approved( int $creative_id ): bool {
+		$images = new Image_Resource_Repository();
+		if ( null !== $images->source( $creative_id ) ) {
+			return $images->ready( $creative_id );
+		}
 		return in_array(
 			(string) get_post_meta( $creative_id, self::META_REVIEW_STATE, true ),
 			array( 'approved', 'replaced' ),
@@ -431,28 +443,41 @@ final class Creative_Repository {
 	 *
 	 * @param int    $creative_id Creative post id.
 	 * @param string $click_url   Validated destination.
-	 * @return void
+	 * @return bool
 	 */
-	public function set_click_url( int $creative_id, string $click_url ): void {
-		update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $click_url ) );
+	public function set_click_url( int $creative_id, string $click_url ): bool {
+		return $this->set_text( $creative_id, $click_url, (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ) );
 	}
 
 	/**
 	 * Writes both text fields on an editable creative.
 	 *
-	 * Callers ask `Revision_Policy::is_frozen()` first. This layer does not
-	 * judge whether the write is allowed, in keeping with the rest of the
-	 * repository — but it is worth knowing that calling it on a promoted
-	 * creative is the mistake the policy exists to prevent.
+	 * Callers use Revision_Policy to choose an edit or a new revision. The
+	 * publication claim also protects this persistence boundary: promotion
+	 * cannot freeze the source between the caller's check and these writes.
 	 *
 	 * @param int    $creative_id Creative post id.
 	 * @param string $click_url   Validated destination.
 	 * @param string $alt_text    Alternative text.
-	 * @return void
+	 * @return bool
 	 */
-	public function set_text( int $creative_id, string $click_url, string $alt_text ): void {
-		update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $click_url ) );
-		update_post_meta( $creative_id, self::META_ALT_TEXT, wp_slash( $alt_text ) );
+	public function set_text( int $creative_id, string $click_url, string $alt_text ): bool {
+		$records = new Image_Resource_Repository();
+		$lock    = $records->claim( $creative_id );
+		if ( '' === $lock ) {
+			return false;
+		}
+		try {
+			wp_cache_delete( $creative_id, 'post_meta' );
+			if ( Post_Types::CREATIVE !== get_post_type( $creative_id ) || (int) get_post_meta( $creative_id, self::META_ATTACHMENT_ID, true ) > 0 || $records->has_publication( $creative_id ) ) {
+				return false;
+			}
+			update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $click_url ) );
+			update_post_meta( $creative_id, self::META_ALT_TEXT, wp_slash( $alt_text ) );
+			return get_post_meta( $creative_id, self::META_CLICK_URL, true ) === $click_url && get_post_meta( $creative_id, self::META_ALT_TEXT, true ) === $alt_text;
+		} finally {
+			$records->release( $lock );
+		}
 	}
 
 
@@ -480,6 +505,7 @@ final class Creative_Repository {
 			return;
 		}
 
+		( new Image_Resource_Repository() )->clear_private_file( $creative_id );
 		delete_post_meta( $creative_id, self::META_PRIVATE_PATH );
 		delete_post_meta( $creative_id, self::META_PRIVATE_TOKEN );
 	}

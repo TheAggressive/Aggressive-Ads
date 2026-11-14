@@ -412,6 +412,22 @@ WebP, and AVIF are allowed up to the placement's own `max_bytes` — 150 KB by d
 never above the 2 MB ceiling — and SVG remains denied regardless of site-wide
 MIME plugins. One creative may cover each placement.
 
+Responsive image uploads add optional multipart `renditions[]` alongside the
+required base `file`. The same shape is accepted for artwork replacements.
+Each rendition must have a different size from the placement's current size map;
+the base must match the stored placement size. Limits are six images including
+the base, 2 MiB aggregate, and the existing per-file byte/pixel limits. Kind,
+dimensions, hashes, approval and organization remain server-derived. An absent
+base does not turn supplied renditions into a text-only update.
+
+The authorized image file route accepts `size=WIDTHxHEIGHT` for an image set,
+defaulting to its base. It streams only the chosen raster, never the encrypted
+container. The preview document shows all set members for review and retains the
+image-only sandbox/CSP. Missing/foreign sizes return the same unavailable answer.
+Native paid image descriptors include `format: "image"` and `formatVersion: 1`;
+the server chooses the rendition using the placement's existing viewport map.
+The client refuses unsupported descriptors before painting or firing a beacon.
+
 `GET /placements` reports each placement's `max_bytes` so a client can say what
 to prepare rather than what went wrong. `PATCH /placements/{id}` accepts it
 under `MANAGE_PLACEMENTS`, and follows the same omitted-means-unchanged rule as

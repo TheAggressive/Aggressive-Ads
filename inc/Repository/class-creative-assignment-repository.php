@@ -39,6 +39,7 @@ final class Creative_Assignment_Repository {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( Schema::creative_assignments_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		wp_cache_delete( 'columns_' . get_current_blog_id(), 'aggr_image_schema' );
 		$this->table_exists = null;
 	}
 
@@ -48,11 +49,7 @@ final class Creative_Assignment_Repository {
 			return $this->table_exists;
 		}
 
-		global $wpdb;
-		$table = $this->table_name();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table schema introspection.
-		$this->table_exists = $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		$this->table_exists = null !== ( new Image_Projection_Repository() )->columns();
 
 		return $this->table_exists;
 	}
@@ -65,6 +62,7 @@ final class Creative_Assignment_Repository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Uninstall of this repository's fixed table.
 		$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
 		$this->table_exists = false;
+		wp_cache_delete( 'columns_' . get_current_blog_id(), 'aggr_image_schema' );
 	}
 
 	/**
@@ -146,12 +144,18 @@ final class Creative_Assignment_Repository {
 			'width'           => (int) ( $fields['width'] ?? 0 ),
 			'height'          => (int) ( $fields['height'] ?? 0 ),
 			'attachment_id'   => (int) ( $fields['attachment_id'] ?? 0 ),
+			'image_version'   => (int) ( $fields['image_version'] ?? 0 ),
+			'image_sizes'     => (string) ( $fields['image_sizes'] ?? '' ),
+			'image_hash'      => (string) ( $fields['image_hash'] ?? '' ),
 			'revision'        => 1,
 			'compat_key'      => null === $slot ? 1 : null,
 			'created_at_ts'   => $now,
 			'updated_at_ts'   => $now,
 		);
 
+		if ( ! ( new Image_Projection_Repository() )->available() ) {
+			unset( $row['image_version'], $row['image_sizes'], $row['image_hash'] );
+		}
 		$was_suppressing = $wpdb->suppress_errors( true );
 
 		try {
@@ -159,7 +163,7 @@ final class Creative_Assignment_Repository {
 			$wpdb->insert(
 				$this->table_name(),
 				$row,
-				array( '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d' )
+				array_map( static fn ( string $key ): string => in_array( $key, array( 'status', 'click_url', 'alt_text', 'image_sizes', 'image_hash' ), true ) ? '%s' : '%d', array_keys( $row ) )
 			);
 		} finally {
 			$wpdb->suppress_errors( $was_suppressing );
@@ -304,19 +308,24 @@ final class Creative_Assignment_Repository {
 
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table update owned by this repository.
+		$fields = array(
+			'revision_id'   => $revision_id,
+			'click_url'     => (string) ( $snapshot['click_url'] ?? $current['click_url'] ),
+			'alt_text'      => mb_substr( (string) ( $snapshot['alt_text'] ?? $current['alt_text'] ), 0, 255 ),
+			'revision'      => (int) $current['revision'] + 1,
+			'updated_at_ts' => time(),
+		);
+		if ( ( new Image_Projection_Repository() )->available() ) {
+			$fields = array_merge( $fields, ( new Image_Resource_Repository() )->projection( $revision_id ) );
+		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Revision-scoped snapshot update; fixed keys and expected prior revision prevent overwriting a concurrent edit.
 		$updated = $wpdb->update(
 			$this->table_name(),
+			$fields,
 			array(
-				'revision_id'   => $revision_id,
-				'click_url'     => (string) ( $snapshot['click_url'] ?? $current['click_url'] ),
-				'alt_text'      => mb_substr( (string) ( $snapshot['alt_text'] ?? $current['alt_text'] ), 0, 255 ),
-				'revision'      => (int) $current['revision'] + 1,
-				'updated_at_ts' => time(),
-			),
-			array( 'id' => (int) $current['id'] ),
-			array( '%d', '%s', '%s', '%d', '%d' ),
-			array( '%d' )
+				'id'       => (int) $current['id'],
+				'revision' => (int) $current['revision'],
+			)
 		);
 
 		return false !== $updated;
@@ -390,8 +399,8 @@ final class Creative_Assignment_Repository {
 				continue;
 			}
 
-			$set[]    = 'status' === $column ? "{$column} = %s" : "{$column} = %d";
-			$values[] = 'status' === $column ? (string) $fields[ $column ] : (int) $fields[ $column ];
+			$set[]    = in_array( $column, array( 'status', 'image_sizes', 'image_hash' ), true ) ? "{$column} = %s" : "{$column} = %d";
+			$values[] = in_array( $column, array( 'status', 'image_sizes', 'image_hash' ), true ) ? (string) $fields[ $column ] : (int) $fields[ $column ];
 		}
 
 		if ( array() === $set ) {
@@ -452,7 +461,7 @@ final class Creative_Assignment_Repository {
 
 		global $wpdb;
 
-		$columns = array( 'status', 'attachment_id', 'organization_id' );
+		$columns = array( 'status', 'attachment_id', 'organization_id', 'image_version', 'image_sizes', 'image_hash' );
 		$set     = array();
 		$values  = array();
 
@@ -461,8 +470,8 @@ final class Creative_Assignment_Repository {
 				continue;
 			}
 
-			$set[]    = 'status' === $column ? "{$column} = %s" : "{$column} = %d";
-			$values[] = 'status' === $column ? (string) $fields[ $column ] : (int) $fields[ $column ];
+			$set[]    = in_array( $column, array( 'status', 'image_sizes', 'image_hash' ), true ) ? "{$column} = %s" : "{$column} = %d";
+			$values[] = in_array( $column, array( 'status', 'image_sizes', 'image_hash' ), true ) ? (string) $fields[ $column ] : (int) $fields[ $column ];
 		}
 
 		if ( array() === $set ) {
@@ -663,19 +672,23 @@ final class Creative_Assignment_Repository {
 
 		$limit = max( 1, min( 500, $limit ) );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The candidate read is the hot path; caching belongs to the caller, which knows the fill window.
+		$image_ready  = ( new Image_Projection_Repository() )->available();
+		$image_fields = $image_ready ? 'image_version,image_sizes,image_hash' : "0 AS image_version,'' AS image_sizes,'' AS image_hash";
+		$image_guard  = $image_ready ? '' : $wpdb->prepare( 'AND NOT EXISTS (SELECT 1 FROM %i source WHERE source.post_id=revision_id AND source.meta_key=%s)', $wpdb->postmeta, Creative_Repository::META_IMAGE_SOURCE );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The only interpolated fragment is one of two fixed column lists; all values are prepared and fill caching belongs to the caller.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT id, line_item_id, campaign_id, organization_id, asset_id, revision_id,
+				"SELECT id, line_item_id, campaign_id, organization_id, asset_id, revision_id,
 					placement_id, status, weight, start_at_ts, end_at_ts,
-					click_url, alt_text, width, height, attachment_id
+					click_url, alt_text, width, height, attachment_id, {$image_fields}
 				FROM %i
 				WHERE placement_id = %d
 					AND status = %s
 					AND ( start_at_ts = 0 OR start_at_ts <= %d )
 					AND ( end_at_ts = 0 OR end_at_ts > %d )
+				{$image_guard}
 				ORDER BY id ASC
-				LIMIT %d',
+				LIMIT %d",
 				$this->table_name(),
 				$placement_id,
 				Assignment_Rules::LIVE,
@@ -685,6 +698,8 @@ final class Creative_Assignment_Repository {
 			),
 			ARRAY_A
 		);
+
+		// phpcs:enable
 
 		return is_array( $rows ) ? $rows : array();
 	}

@@ -83,7 +83,7 @@ final class Creative_Copies {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ), 403 );
 		}
 
-		$file = $this->sources->resolve( $source_id );
+		$file = $this->sources->upload( $source_id );
 
 		if ( null === $file ) {
 			return $this->error( 'aggr_copy_source_unavailable', __( 'That ad\'s file could not be read. Upload it to this size instead.', 'aggressive-ads' ), 422, 'file' );
@@ -93,18 +93,14 @@ final class Creative_Copies {
 			$result = $this->manager->upload(
 				$source['campaign_id'],
 				$placement_id,
-				array(
-					'tmp_name' => $file['path'],
-					'name'     => '' !== $file['name'] ? $file['name'] : 'creative.' . $file['extension'],
-					'error'    => UPLOAD_ERR_OK,
-				),
+				$file['file'],
 				$source['click_url'],
 				$source['alt_text']
 			);
 		} finally {
 			// Decrypted artwork outside private storage: gone whatever happened.
-			if ( $file['temporary'] ) {
-				wp_delete_file( $file['path'] );
+			foreach ( $file['temporary'] as $path ) {
+				wp_delete_file( $path );
 			}
 		}
 

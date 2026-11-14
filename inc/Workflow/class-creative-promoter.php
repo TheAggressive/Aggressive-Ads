@@ -36,11 +36,13 @@ final class Creative_Promoter {
 	 * @param Creative_Repository            $creatives Creative persistence.
 	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
 	 * @param Private_Storage                $storage   Private file storage.
+	 * @param Image_Publication              $images Complete responsive publication.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Attachment_Repository $attachments,
-		private readonly Private_Storage $storage
+		private readonly Private_Storage $storage,
+		private readonly Image_Publication $images
 	) {
 	}
 
@@ -70,6 +72,28 @@ final class Creative_Promoter {
 	 * @return int|WP_Error Attachment id.
 	 */
 	public function promote( int $creative_id ) {
+		$resources = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+		$source    = $resources->source( $creative_id );
+		if ( null !== $source ) {
+			return is_array( $source ) ? $this->images->promote( $creative_id ) : new WP_Error( 'aggr_image_publication_failed', __( 'The image set could not be published. Please try again.', 'aggressive-ads' ) );
+		}
+		$lock = $resources->claim( $creative_id );
+		if ( '' === $lock ) {
+			return new WP_Error( 'aggr_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ) );
+		}
+		try {
+			return null === $resources->source( $creative_id ) ? $this->promote_legacy( $creative_id ) : new WP_Error( 'aggr_image_publication_failed', __( 'The image set could not be published. Please try again.', 'aggressive-ads' ) );
+		} finally {
+			$resources->release( $lock );
+		}
+	}
+
+	/**
+	 * Publish a legacy single-image revision while the source lock is held.
+	 *
+	 * @param int $creative_id Reviewed revision.
+	 */
+	private function promote_legacy( int $creative_id ): int|WP_Error {
 		if ( $this->attachments->has_attachment( $creative_id ) ) {
 			return $this->attachments->attachment_id( $creative_id );
 		}
@@ -266,7 +290,9 @@ final class Creative_Promoter {
 	 * @return WP_Error|null
 	 */
 	private function missing_artwork( int $creative_id ): ?WP_Error {
-		if ( $this->attachments->has_attachment( $creative_id ) ) {
+		$images = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+		$source = $images->source( $creative_id );
+		if ( false !== $source && ( null === $source ? $this->attachments->has_attachment( $creative_id ) : null !== $images->publication( $creative_id ) ) ) {
 			return null;
 		}
 

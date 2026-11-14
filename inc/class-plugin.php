@@ -342,6 +342,7 @@ final class Plugin {
 			Assignment_Projection::class,
 			Line_Item_Migrator::class,
 			Creative_Assignment_Migrator::class,
+			\Aggressive\Ads\Install\Image_Projection_Migrator::class,
 			Assignment_Health::class,
 			Decision_Health::class,
 			\Aggressive\Ads\Install\Conversion_Health::class,

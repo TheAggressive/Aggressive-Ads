@@ -72,6 +72,11 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 		>
 	</div>
 
+	<?php
+	$aggr_rendition_placement = (int) ( $aggr_creative['placement_id'] ?? 0 );
+	$aggr_rendition_key       = 'artwork-' . $aggr_artwork_creative;
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+	?>
 	<div class="aggr-overlay__actions">
 		<a
 			class="aggr-button aggr-button--secondary"

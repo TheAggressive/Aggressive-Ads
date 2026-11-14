@@ -69,9 +69,15 @@ final class Eligibility_Stage implements Decision_Stage {
 				 * shut rather than guessing: refusing to fill is recoverable,
 				 * serving the wrong size is not.
 				 */
-				$requested = (string) ( $context->facts['size'] ?? '' );
+				$requested     = (string) ( $context->facts['size'] ?? '' );
+				$image_version = (int) ( $row['image_version'] ?? 0 );
+				if ( 0 !== $image_version && ( Image_Set::VERSION !== $image_version || 1 !== preg_match( '/\A[0-9a-f]{64}\z/', (string) ( $row['image_hash'] ?? '' ) ) ) ) {
+					$evaluated[] = $candidate->exclude( $this->name(), Exclusion_Reason::ELIGIBILITY_MISSING_ATTACHMENT );
+					continue;
+				}
 
-				if ( '' !== $requested && $requested !== $this->candidate_size( $row ) ) {
+				$matches = 0 === $image_version ? $requested === $this->candidate_size( $row ) : in_array( $requested, explode( ',', (string) ( $row['image_sizes'] ?? '' ) ), true );
+				if ( '' !== $requested && ! $matches ) {
 					$evaluated[] = $candidate->exclude( $this->name(), Exclusion_Reason::ELIGIBILITY_SIZE_MISMATCH );
 					continue;
 				}

@@ -276,6 +276,8 @@ final class Creative_Feedback {
 			'aggr_replacement_pending'       => __( 'This ad already has an update waiting for review.', 'aggressive-ads' ),
 			'aggr_replacement_unavailable'   => __( 'Only an ad in a scheduled or live campaign can be updated.', 'aggressive-ads' ),
 			'aggr_replacement_busy'          => __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ),
+			'aggr_image_set_invalid' => __( 'Choose a base image and up to five different renditions in the placement’s supported sizes, totaling no more than 2 MB.', 'aggressive-ads' ),
+			'aggr_image_set_unavailable' => __( 'Responsive image delivery is not ready. Ask the publisher to complete the database upgrade, then try again.', 'aggressive-ads' ),
 			'aggr_upload_no_file'           => __( 'No file was received. Choose an ad creative and try again.', 'aggressive-ads' ),
 			'aggr_upload_too_large'         => sprintf(
 				/* translators: %s: this placement's maximum file size, e.g. 150 KB. */

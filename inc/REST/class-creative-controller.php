@@ -195,7 +195,7 @@ final class Creative_Controller implements Service {
 		$placement_id = (int) $request->get_param( 'placement_id' );
 
 		$files = $request->get_file_params();
-		$file  = isset( $files['file'] ) && is_array( $files['file'] ) ? $files['file'] : array();
+		$file  = \Aggressive\Ads\Support\Upload_Files::read( $files );
 
 		$result = $this->manager->upload(
 			$campaign_id,
@@ -240,7 +240,7 @@ final class Creative_Controller implements Service {
 	 */
 	public function replace( WP_REST_Request $request ) {
 		$files = $request->get_file_params();
-		$file  = isset( $files['file'] ) && is_array( $files['file'] ) ? $files['file'] : array();
+		$file  = \Aggressive\Ads\Support\Upload_Files::read( $files );
 
 		/*
 		 * No file means a text-only change.
