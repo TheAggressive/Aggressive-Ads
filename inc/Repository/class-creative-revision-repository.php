@@ -319,7 +319,7 @@ final class Creative_Revision_Repository {
 		$source          = $records->source( $revision_id );
 		$previous_source = $records->source( $previous );
 		return '' !== $mine && $mine === $theirs && false !== $source && false !== $previous_source
-			&& ( ( null === $source && null === $previous_source ) || ( is_array( $source ) && is_array( $previous_source ) && $source['manifest'] === $previous_source['manifest'] && $source['upload']['sha256'] === $previous_source['upload']['sha256'] ) );
+			&& ( ( null === $source && null === $previous_source ) || ( is_array( $source ) && is_array( $previous_source ) && $source['version'] === $previous_source['version'] && $source['manifest'] === $previous_source['manifest'] && ( $source['html5'] ?? null ) === ( $previous_source['html5'] ?? null ) && $source['upload']['sha256'] === $previous_source['upload']['sha256'] ) );
 	}
 
 	/**

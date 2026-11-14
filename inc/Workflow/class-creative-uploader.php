@@ -45,6 +45,22 @@ final class Creative_Uploader {
 	 * @return array{path: string, token: string, sha256: string, bytes: int, mime: string, width: int, height: int, name: string}|WP_Error
 	 */
 	public function accept( array $file, int $max_bytes ) {
+		$inspected = $this->inspect( $file, $max_bytes );
+		if ( is_wp_error( $inspected ) ) {
+			return $inspected;
+		}
+		$stored = $this->storage->store( (string) $file['tmp_name'], Upload_Rules::extension_for_mime( $inspected['mime'] ) );
+		return is_wp_error( $stored ) ? $stored : array_merge( $inspected, $stored );
+	}
+
+	/**
+	 * Inspect raster bytes without creating a second durable private artifact.
+	 *
+	 * @param array<string,mixed> $file Upload or generated temporary raster.
+	 * @param int                 $max_bytes Placement byte limit.
+	 * @return array{bytes:int,mime:string,width:int,height:int,name:string}|WP_Error
+	 */
+	public function inspect( array $file, int $max_bytes ) {
 		$tmp = isset( $file['tmp_name'] ) && is_string( $file['tmp_name'] ) ? $file['tmp_name'] : '';
 
 		if ( '' === $tmp || ! is_file( $tmp ) ) {
@@ -97,17 +113,8 @@ final class Creative_Uploader {
 			return $this->error( $type_problem, $max_bytes );
 		}
 
-		$stored = $this->storage->store( $tmp, Upload_Rules::extension_for_mime( $detected ) );
-
-		if ( is_wp_error( $stored ) ) {
-			return $stored;
-		}
-
 		return array(
-			'path'   => $stored['path'],
-			'token'  => $stored['token'],
-			'sha256' => $stored['sha256'],
-			'bytes'  => $stored['bytes'],
+			'bytes'  => (int) $bytes,
 			'mime'   => $detected,
 			'width'  => $width,
 			'height' => $height,

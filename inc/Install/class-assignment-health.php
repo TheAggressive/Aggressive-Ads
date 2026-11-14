@@ -61,8 +61,30 @@ final class Assignment_Health implements Service {
 			'label' => __( 'Image eligibility upgrade', 'aggressive-ads' ),
 			'test'  => array( $this, 'image_projection' ),
 		);
+		$tests['direct']['aggr_static_html5']         = array(
+			'label' => __( 'Static HTML5 runtime', 'aggressive-ads' ),
+			'test'  => array( $this, 'static_html5' ),
+		);
 
 		return $tests;
+	}
+
+	/**
+	 * Report optional parser/schema readiness without qualifying executable modes or stored files.
+	 *
+	 * @return array<string,mixed> Site Health direct-test result.
+	 */
+	public function static_html5(): array {
+		$ready          = \Aggressive\Ads\Support\Html5_Runtime::available() && ( new \Aggressive\Ads\Repository\Image_Projection_Repository() )->available();
+		$result         = $this->result(
+			$ready ? 'good' : 'recommended',
+			$ready ? __( 'Static HTML5 runtime is available', 'aggressive-ads' ) : __( 'Static HTML5 runtime is unavailable', 'aggressive-ads' ),
+			$ready
+				? __( 'Staff may upload the supported static HTML5 profile with a reviewed raster fallback. Script and external modes remain unavailable. This check does not verify every published resource.', 'aggressive-ads' )
+				: __( 'Static HTML5 requires PHP 8.4 or later with ZIP and the HTML5 DOM parser, plus the completed image eligibility schema. Existing image delivery remains available. See the plugin runbook.', 'aggressive-ads' )
+		);
+		$result['test'] = 'aggr_static_html5';
+		return $result;
 	}
 
 	/**

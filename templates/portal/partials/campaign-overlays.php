@@ -330,11 +330,12 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								 * keeps the current ad serving meanwhile.
 								 */
 								?>
-								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>">
+								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() . ( current_user_can( \Aggressive\Ads\Security\Capabilities::REVIEW_CAMPAIGNS ) ? ',.zip' : '' ) ); ?>">
 								<?php
 								$aggr_rendition_placement = (int) ( $aggr_creative['placement_id'] ?? 0 );
 								$aggr_rendition_key       = 'replacement-' . $aggr_creative['id'];
 								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-html5-fallback.php';
 								?>
 								<p class="aggr-hint">
 									<?php

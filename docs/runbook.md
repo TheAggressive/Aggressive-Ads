@@ -471,6 +471,28 @@ for investigation and restore the correct key/backup or submit replacement
 artwork for review. The last approved revision is not replaced by ingestion
 failure. Text changes require their own new review proof.
 
+Static HTML5 uses the same source lock, schema 35 projection and publication
+recovery. Site Health's static HTML5 check requires PHP 8.4+ with ZIP and the
+HTML5 DOM parser; it does not inspect every file or qualify script execution.
+Unavailable ingestion returns `aggr_html5_unavailable`; invalid/unsupported input
+returns `aggr_html5_invalid`. Check placement limits and the [supported static
+profile](platform-p18-rich-creative-types.md) before retrying. Do not substitute
+an HTML4 parser, relax the archive limits, add executable members, grant sandbox
+permissions or override the retained STUN finding to make a package work.
+
+The generated public JSON envelope and raster are both publication resources;
+include both in backups/CDN preservation. All files in an approved package are
+public, including original archive bytes encoded inside the inert envelope.
+Never rename that envelope to `.html`, decode it into a served document, or
+replace an approved file in place. Restore exact reviewed bytes from backup or
+stage a replacement for new review. Failed integrity checks refuse reapproval
+and copying. For emergency format shutdown, pause the affected assignments or
+campaigns through the existing controls and invalidate their fill caches before
+rolling back; preserve all source/receipt/history data. Older code refuses
+version-2 source/projection rows. A browser that cannot prepare the compiled
+content within four seconds uses its reviewed raster with the same measurement
+identity; reduced motion does so without fetching the envelope.
+
 Before rolling back to code without image-set support, pause affected campaigns
 and invalidate their fill caches. Preserve source/receipt metadata, attachments,
 history and counters. A retained base attachment gives older code its legacy

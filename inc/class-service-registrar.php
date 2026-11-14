@@ -789,13 +789,21 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			\Aggressive\Ads\Workflow\Creative_Ingestion::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Creative_Ingestion => new \Aggressive\Ads\Workflow\Creative_Ingestion(
+				$c->get( \Aggressive\Ads\Workflow\Image_Handler::class ),
+				new \Aggressive\Ads\Workflow\Html5_Handler( $c->get( Creative_Uploader::class ), $c->get( Private_Storage::class ) )
+			)
+		);
+
+		$container->register(
 			Creative_Manager::class,
 			static fn ( Service_Container $c ): Creative_Manager => new Creative_Manager(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Image_Handler::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Ingestion::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class ),
@@ -897,7 +905,7 @@ final class Service_Registrar {
 				$c->get( Creative_Repository::class ),
 				$c->get( Creative_Revision_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Image_Handler::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Ingestion::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Ad_Provider_Interface::class ),

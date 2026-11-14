@@ -32,7 +32,8 @@ use Aggressive\Ads\Portal\Creative_Feedback;
 
 $aggr_slot_key          = (string) $aggr_slot['id'];
 $aggr_default_click_url = (string) ( $aggr_campaign['default_click_url'] ?? '' );
-$aggr_responsive        = true === ( $aggr_slot['responsive'] ?? false );
+$aggr_static_html5      = current_user_can( \Aggressive\Ads\Security\Capabilities::REVIEW_CAMPAIGNS );
+$aggr_responsive        = $aggr_static_html5 || true === ( $aggr_slot['responsive'] ?? false );
 $aggr_click_error       = ( 'aggr-click-' . $aggr_slot_key ) === $aggr_creative_error_for;
 
 /*
@@ -51,6 +52,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	data-wp-interactive="<?php echo esc_attr( Assets::UPLOAD_STORE ); ?>"
 	<?php echo wp_interactivity_data_wp_context( array( 'uploadId' => (string) $aggr_slot['id'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context(). ?>
 	<?php echo $aggr_responsive ? 'data-aggr-responsive="true"' : ''; ?>
+	<?php echo $aggr_static_html5 ? 'data-aggr-static-html5="true"' : ''; ?>
 	data-aggr-upload="<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"
 	data-wp-init="actions.init"
 >
@@ -77,7 +79,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 		<?php
 		echo esc_html(
 			$aggr_responsive
-				? __( 'Choose the base image and any optional renditions, then select Upload creative.', 'aggressive-ads' )
+				? ( $aggr_static_html5 ? __( 'Choose image artwork or a static HTML5 ZIP and its raster fallback, then select Upload creative.', 'aggressive-ads' ) : __( 'Choose the base image and any optional renditions, then select Upload creative.', 'aggressive-ads' ) )
 				: ( '' === $aggr_default_click_url
 				? __( 'Uploads by itself: choose a file, enter its link, and the upload starts when you leave the link field.', 'aggressive-ads' )
 				: __( 'Uploads as soon as you choose a file, linking to the address below unless you change it first.', 'aggressive-ads' ) )
@@ -96,7 +98,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 			);
 			?>
 		</p>
-		<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
+		<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() . ( $aggr_static_html5 ? ',.zip' : '' ) ); ?>" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 		<?php
 		/*
 		 * Visible, not `aggr-sr`.
@@ -182,6 +184,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	$aggr_rendition_placement = (int) $aggr_slot['id'];
 	$aggr_rendition_key       = 'upload-' . $aggr_slot_key;
 	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-html5-fallback.php';
 	?>
 	<button class="aggr-button" type="submit" <?php echo $aggr_responsive ? '' : 'hidden'; ?>><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
 </form>

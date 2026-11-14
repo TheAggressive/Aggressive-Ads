@@ -20,6 +20,12 @@ final class Upload_Files {
 	 */
 	public static function read( array $files ): array {
 		$base = is_array( $files['file'] ?? null ) ? $files['file'] : array();
+		if ( array_key_exists( 'fallback', $files ) ) {
+			$fallback = $files['fallback'];
+			if ( ! is_array( $fallback ) || ( $fallback['error'] ?? null ) !== UPLOAD_ERR_NO_FILE ) {
+				$base['fallback'] = $fallback;
+			}
+		}
 		if ( ! isset( $files['renditions'] ) ) {
 			return $base;
 		}

@@ -97,6 +97,118 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		}
 	}
 
+	/** A real static HTML5 publication remains bound to its site when identical ids and metadata exist elsewhere. */
+	public function test_static_html5_publication_cannot_cross_site_scope(): void {
+		$this->network_activate();
+		$first         = (int) self::factory()->blog->create();
+		$second        = (int) self::factory()->blog->create();
+		$staff         = (int) self::factory()->user->create();
+		$previous_user = get_current_user_id();
+		$temporary     = array();
+		$published     = array();
+		try {
+			switch_to_blog( $first );
+			add_user_to_blog( $first, $staff, 'administrator' );
+			wp_set_current_user( $staff );
+			$org = (int) self::factory()->post->create(
+				array(
+					'post_type'   => Post_Types::ORGANIZATION,
+					'post_status' => 'publish',
+				)
+			);
+			update_post_meta( $org, Org_Repository::META_OWNER_USER, $staff );
+			$placement = (int) self::factory()->post->create(
+				array(
+					'post_type'   => Post_Types::PLACEMENT,
+					'post_status' => 'publish',
+				)
+			);
+			update_post_meta( $placement, \Aggressive\Ads\Repository\Placement_Repository::META_IS_ACTIVE, 1 );
+			update_post_meta( $placement, \Aggressive\Ads\Repository\Placement_Repository::META_SIZE, '728x90' );
+			$campaign = (int) self::factory()->post->create(
+				array(
+					'post_type'   => Post_Types::CAMPAIGN,
+					'post_status' => \Aggressive\Ads\Core\Post_Statuses::DRAFT,
+					'post_author' => $staff,
+				)
+			);
+			update_post_meta( $campaign, Campaign_Repository::META_ORG_ID, $org );
+			update_post_meta( $campaign, Campaign_Repository::META_PLACEMENT_ID, $placement );
+			$archive   = wp_tempnam( 'aggr-site-html5' );
+			$raster    = wp_tempnam( 'aggr-site-raster' );
+			$temporary = array( $archive, $raster );
+			$zip       = new \ZipArchive();
+			$this->assertTrue( $zip->open( $archive, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) );
+			$this->assertTrue( $zip->addFromString( 'index.html', '<div>Site-owned static creative</div>' ) );
+			$this->assertTrue( $zip->close() );
+			$image = imagecreatetruecolor( 728, 90 );
+			$this->assertTrue( imagepng( $image, $raster ) );
+			$input  = array(
+				'name'     => 'creative.zip',
+				'tmp_name' => $archive,
+				'error'    => UPLOAD_ERR_OK,
+				'fallback' => array(
+					'name'     => 'fallback.png',
+					'tmp_name' => $raster,
+					'error'    => UPLOAD_ERR_OK,
+				),
+			);
+			$upload = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Creative_Manager::class )->upload( $campaign, $placement, $input, 'https://example.com/site', 'Site-owned ad' );
+			$this->assertIsArray( $upload );
+			$id = $upload['id'];
+			$this->assertIsInt( Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Creative_Promoter::class )->promote( $id ) );
+			$records = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+			$receipt = $records->publication( $id );
+			$this->assertIsArray( $receipt );
+			$published = array_merge( array_column( $receipt['resources'], 'attachment_id' ), array( $receipt['html5']['attachment_id'] ) );
+			$this->assertTrue( $records->ready( $id ) );
+			$metadata = get_post_meta( $id );
+			$tuple    = array(
+				'revision_id'  => $id,
+				'campaign_id'  => $campaign,
+				'placement_id' => $placement,
+			);
+			$this->assertIsArray( $records->delivery( $tuple, '728x90' ) );
+			restore_current_blog();
+			switch_to_blog( $second );
+			$this->assertNull( $records->source( $id ) );
+			$this->assertSame(
+				$id,
+				wp_insert_post(
+					array(
+						'import_id'   => $id,
+						'post_type'   => Post_Types::CREATIVE,
+						'post_status' => 'publish',
+						'post_title'  => 'Foreign copied metadata',
+					)
+				)
+			);
+			foreach ( $metadata as $key => $values ) {
+				foreach ( $values as $value ) {
+					add_post_meta( $id, $key, wp_slash( $value ) );
+				}
+			}
+			$this->assertIsArray( $records->source( $id ) );
+			$this->assertNull( $records->publication( $id ) );
+			$this->assertFalse( $records->ready( $id ) );
+			$this->assertNull( $records->delivery( $tuple, '728x90' ) );
+			$this->assertNull( ( new \Aggressive\Ads\Workflow\Image_Resources( $records, Plugin::instance()->container()->get( \Aggressive\Ads\Storage\Private_Storage::class ) ) )->read( $id ) );
+		} finally {
+			while ( ms_is_switched() ) {
+				restore_current_blog();
+			}
+			switch_to_blog( $first );
+			foreach ( $published as $attachment ) {
+				wp_delete_attachment( $attachment, true );
+			}
+			restore_current_blog();
+			foreach ( $temporary as $path ) {
+				wp_delete_file( $path );
+			}
+			wp_set_current_user( $previous_user );
+		}
+	}
+
 	/**
 	 * A new site does not inherit schema from a per-site install elsewhere.
 	 *

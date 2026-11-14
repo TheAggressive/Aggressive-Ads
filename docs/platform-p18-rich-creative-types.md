@@ -10,8 +10,9 @@
 
 This defines the phase contract and its acceptance requirements. Responsive
 image implementation is tracked in #374 and described below.
-HTML5, tags and video remain separate follow-ups (#375–#377). This is not phase
-exit evidence; script and external modes retain their browser/P27 gates.
+Static HTML5 is implemented by #375 as the constrained profile below. Tags and
+video remain follow-ups (#376–#377). This is not phase exit evidence; script and
+external modes retain their browser/P27 gates.
 
 ### Responsive image implementation
 
@@ -83,8 +84,108 @@ Local verification for this implementation passed the complete `qa:fast` gate,
 1,367 PHP unit tests, 2,069 native WordPress integration tests, 11 multisite
 tests, 227 JavaScript tests and 71 browser cases. Locked dependency audits found
 no new advisories. The Studio runner restored its disposable database/uploads;
-the working site's data was not used as a test fixture. GitHub's full CI and
-installed-artifact checks are separate merge requirements.
+the working site's data was not used as a test fixture. GitHub's full CI remains required before merge. Installed-artifact acceptance
+is an additional release gate.
+
+### Static HTML5 implementation
+
+Staff holding the existing review and upload capabilities may submit a ZIP as
+`file` with a separate, matching raster `fallback` through the existing upload
+and replacement forms or REST routes. There is no advertiser kind parameter or
+new capability. Every attempt uses the existing upload limiter once. All files
+in an approved package become public; the form discloses that before upload.
+
+This first profile accepts one root `index.html`, local `.css` files and the
+established raster types (SVG remains denied). It requires ZIP and PHP 8.4's
+[HTML5 string parser](https://www.php.net/manual/en/dom-htmldocument.createfromstring.php).
+Missing capabilities refuse ingestion/publication without replacing the image
+path; already reviewed static revisions can use their raster fallback.
+
+`Html5_Archive` reads indexed libzip streams without extraction. Actual streamed
+bytes, CRC, entry count, path components, collisions, file types, encryption,
+compression ratio and one shared time/memory budget are checked. Preambles,
+trailing data, comments, multidisk inputs, executable/unknown members, symlinks,
+server files, fonts and nested documents/archives are refused. Canonical ASCII
+paths are at most 128 bytes and five directory levels. Local source snapshots
+use generated owner-only files in the system temporary directory, outside
+WordPress/content roots, and are deleted in `finally`.
+
+`Html5_Compiler` rebuilds an HTML-namespace allowlist, rather than serializing an
+uploaded tree. Supported content is static text/containers, headings, lists,
+emphasis, raster images and styles. Images require alternative text and a local
+member reference, then become verified raster data URIs. CSS supports simple
+tag/class/id selectors and comma lists, with a closed set of layout, spacing,
+color, border and typography declarations. Values have no function, string,
+escape, URL or at-rule syntax. There are no scripts, handlers, interactive
+controls/links, animation, custom elements, SVG, imports or external resources.
+Unsupported required syntax is refused rather than silently removed. Parsing
+is bounded to 4,096 nodes and depth 32; local stylesheets to 64 KiB and inline
+styles to 4 KiB. Compressed ZIP and compiled document each meet the placement
+limit (at most 2 MiB), with at most 128 entries, 8 MiB actual expanded bytes,
+2 MiB per entry, 100:1 expansion, five seconds and 64 MiB additional peak ingest
+memory. These are enforced input/work ceilings, not a hosting capacity claim.
+
+One encrypted JSON envelope contains original ZIP, compiled document and
+separately inspected fallback, plus their versioned manifests. Each binary/text
+body is base64-encoded. The envelope is capped at 9 MiB and uses JSON hex
+escaping for metadata, so its public bytes contain no raw markup even when a
+display name contains HTML delimiters. Source snapshot version 2 extends the
+existing `_aggr_image_source` record; the raster manifest remains the fallback.
+Schema 35's `image_version=2` distinguishes the format without another table,
+schema migration or conversion of historical `html5` kind values.
+
+Publication shares the existing source claim, freeze/CAS checks and durable
+review receipt. Before exposure it verifies the envelope, every source/output
+hash, fallback and current placement policy. It writes the exact fallback and
+an inert `.json` envelope as marked resources, then commits the source/manifest/
+resource/text/site/parent-bound human review proof. Partial failure compensates
+only fresh resources and retains the private source for retry. Successful
+publication purges that source; copies reconstruct the full package from the
+verified public envelope and receive no approval. A text clone retains shared
+resources but requires new review. Changing its HTML5 facts cannot qualify as
+text-only merely because the fallback is unchanged.
+
+Native fill emits `format: "html5-static"`, `formatVersion: 1`, a generated
+public document URL/checksum and the reviewed raster fallback. Candidate rows
+contain bounded eligibility facts, not HTML or archive bodies. One winning
+manifest read remains inside the existing 12/4/8 cold/warm/token query ceilings;
+there is no file hashing, parsing or archive work on the PHP fill path.
+
+The browser fetches only a same-origin, nonredirecting JSON envelope without
+credentials/referrers, bounds actual response bytes and verifies the compiled
+SHA-256 before assigning `srcdoc` to an empty-sandbox opaque frame. It grants no
+script/same-origin permission and trusts no child message. The existing native
+click link stays outside the frame. One four-second preparation deadline covers
+raster decoding and rich preparation; failed/unknown/tampered/unsupported output
+uses the already decoded raster. Teardown aborts preparation and emits no success
+beacon for a detached slot. Reduced motion selects the raster without fetching
+the document. The shared single/batch measurement path reports only the chosen
+rendering with one identity and impression.
+
+Private review embeds authorized compiled bytes in an empty-sandbox child of
+the existing sandboxed, no-store preview response and shows the raster fallback
+beside it. It exposes no unapproved public URL or reusable bearer download. The
+existing `/file` route serves only the raster. Public source navigation sees
+inert JSON, never an uploaded WordPress-origin HTML response. Site Health reports
+parser/schema readiness and explicitly leaves scripts/external modes unavailable;
+it does not claim that every stored resource was audited.
+
+Executable evidence lives in `StaticHtml5Test`, `Html5ArchiveTest`,
+`Html5CompilerTest`, the static renderer tests, the multisite publication test and
+shared `static-html5-cases.ts` Chromium/WebKit cases. They exercise real writers
+and readers, source/manifest/publication tampering, compensation/retry, shared
+resources, tenant/site denial, actual boundary bytes and native query budgets.
+Guard-removal runs failed for staff review authority, canonical archive paths,
+actual streamed expansion ratio, script refusal, HTML5 manifest/review binding,
+complete text-only classification, inert public JSON metadata, compiled-output
+checksum, sandbox attachment and detached-slot measurement. Every source file
+was restored byte-for-byte before the complete suites ran. These checks prove
+those regressions; they do not qualify executable modes or certify the plugin.
+A further writer/reader regression reproduced filename markup persisting as an
+attachment title under publisher authority in both legacy and static-package
+publication. Both writers now store those titles as plain text; original source
+facts remain bound to their reviewed envelope. The tests failed before the fix.
+The script-enabled isolation probe and its STUN finding remain unchanged.
 
 ## Outcome and scope
 

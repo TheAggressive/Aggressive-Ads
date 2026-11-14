@@ -259,7 +259,7 @@ final class Creative_Promoter {
 		$attachment_id = wp_insert_attachment(
 			array(
 				'post_mime_type' => $details['mime'],
-				'post_title'     => '' !== $details['name'] ? $details['name'] : sprintf( 'Creative %d', $creative_id ),
+				'post_title'     => '' !== $details['name'] ? sanitize_text_field( $details['name'] ) : sprintf( 'Creative %d', $creative_id ),
 				'post_status'    => 'inherit',
 			),
 			$target,

@@ -349,52 +349,64 @@ async function applyFile( id: string, file: File ): Promise< void > {
 	// longer describes what is in the field.
 	input.removeAttribute( 'aria-invalid' );
 
-	const expected = parsePixelSize( current.expectedSize );
-	if ( expected === null ) {
-		announce( id, messageFor( id, 'dimensions' ), 'error' );
-		revealButton( id );
-		return;
-	}
-
-	let width = 0;
-	let height = 0;
-	try {
-		const size = await readImageSize( file );
-		width = size.width;
-		height = size.height;
-	} catch {
-		announce( id, messageFor( id, 'type' ), 'error' );
-		input.setAttribute( 'aria-invalid', 'true' );
-		revealButton( id );
-		return;
-	}
-
-	const result = checkCreativeFile( {
-		mime: file.type,
-		bytes: file.size,
-		width,
-		height,
-		expectedWidth: expected.width,
-		expectedHeight: expected.height,
-		maxBytes: current.maxBytes,
-		maxPixels: current.maxPixels,
-		allowedMime: current.allowedMime,
-	} );
-
-	if ( ! result.ok ) {
+	const staticHtml5 =
+		formFor( id )?.dataset.aggrStaticHtml5 === 'true' &&
+		/\.zip$/i.test( file.name );
+	if ( staticHtml5 && file.size > current.maxBytes ) {
 		input.value = '';
-		announce( id, messageFor( id, result.code ), 'error' );
+		announce( id, messageFor( id, 'size' ), 'error' );
 		input.setAttribute( 'aria-invalid', 'true' );
-
-		/*
-		 * No button here. Choosing another file runs this whole function
-		 * again, so the recovery is the one the person is already making,
-		 * and a button that submits an empty file input is not a way out of
-		 * anything. Revealing it was how a refused image came to look like a
-		 * broken uploader: the button was the only visible thing that
-		 * changed, and the reason was in a paragraph nobody could see.
-		 */
 		return;
+	}
+
+	if ( ! staticHtml5 ) {
+		const expected = parsePixelSize( current.expectedSize );
+		if ( expected === null ) {
+			announce( id, messageFor( id, 'dimensions' ), 'error' );
+			revealButton( id );
+			return;
+		}
+
+		let width = 0;
+		let height = 0;
+		try {
+			const size = await readImageSize( file );
+			width = size.width;
+			height = size.height;
+		} catch {
+			announce( id, messageFor( id, 'type' ), 'error' );
+			input.setAttribute( 'aria-invalid', 'true' );
+			revealButton( id );
+			return;
+		}
+
+		const result = checkCreativeFile( {
+			mime: file.type,
+			bytes: file.size,
+			width,
+			height,
+			expectedWidth: expected.width,
+			expectedHeight: expected.height,
+			maxBytes: current.maxBytes,
+			maxPixels: current.maxPixels,
+			allowedMime: current.allowedMime,
+		} );
+
+		if ( ! result.ok ) {
+			input.value = '';
+			announce( id, messageFor( id, result.code ), 'error' );
+			input.setAttribute( 'aria-invalid', 'true' );
+
+			/*
+			 * No button here. Choosing another file runs this whole function
+			 * again, so the recovery is the one the person is already making,
+			 * and a button that submits an empty file input is not a way out of
+			 * anything. Revealing it was how a refused image came to look like a
+			 * broken uploader: the button was the only visible thing that
+			 * changed, and the reason was in a paragraph nobody could see.
+			 */
+			return;
+		}
 	}
 
 	/*
@@ -423,6 +435,9 @@ async function applyFile( id: string, file: File ): Promise< void > {
 	}
 
 	announce( id, state.i18n.ready ?? '' );
+	if ( staticHtml5 ) {
+		revealButton( id );
+	}
 	maybeSubmit( id );
 }
 

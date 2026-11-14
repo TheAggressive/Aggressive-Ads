@@ -70,6 +70,35 @@ Approved creative is **not** encrypted: promotion copies it into the Media Libra
 
 **On the pixel cap ordering:** a decompression bomb is a small file that expands to gigabytes in memory. GD allocates during `wp_generate_attachment_metadata()`, so a validator that runs afterwards never runs at all — the request is already dead. Dimensions come from `getimagesize()`, which reads the header only, and the cap is applied before anything touches the pixels.
 
+### Static HTML5 packages
+
+`Creative_Ingestion` dispatches only raster and staff static HTML5 profiles.
+The latter checks existing review authority before ZIP work, shares the upload
+limiter and object guards, and requires a separately inspected raster fallback.
+`Html5_Archive` reads bounded indexed streams, never extracts member-selected
+paths, and refuses ambiguous paths, special/encrypted/nested/unsupported files,
+forged sizes, CRC disagreement and actual expansion overruns. `Html5_Compiler`
+rebuilds a restricted HTML/CSS tree with no script, URL, browsing-context or
+interactive authority. Unknown required syntax is refused. PHP 8.4's HTML5
+parser is required; the HTML4 DOM parser is not a security-compatible fallback.
+
+The existing source claim and expected hash serialize replacement/publication.
+A source-bound human receipt freezes both fallback and compiled package; stored
+manifest changes cannot reuse its approval or text-only lane. Partial publication
+compensates only its new resources. The full public source is an inert JSON
+base64 envelope with hex-escaped metadata, rather than navigable raw HTML.
+Private review embeds authorized bytes under HTTP and frame sandboxes and
+no-store headers. It never discloses an unapproved source URL.
+
+The browser verifies the compiled checksum, uses an empty opaque sandbox,
+keeps click authority outside it, and trusts no child messages. It refuses
+foreign/redirected source URLs and uses raster fallback on timeout, tampering,
+unknown profiles or reduced motion. Teardown cancels preparation and cannot
+count a detached rendering. These controls are exercised by `StaticHtml5Test`,
+`Html5ArchiveTest`, `Html5CompilerTest`, static renderer tests, the multisite
+publication test and Chromium/WebKit `static-html5-cases.ts`. They do not qualify
+script-enabled modes: the separate P18 probe still demonstrates a STUN escape.
+
 ## Destination URLs
 
 `wp_http_validate_url()` plus an explicit `http` / `https` scheme allowlist run

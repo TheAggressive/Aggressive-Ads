@@ -58,6 +58,7 @@ const SERVER_SUPPLIED = {
 const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',
 	'src/blocks-interactivity/ad-slot/fill.js',
+	'src/blocks-interactivity/ad-slot/static-html5.js',
 	BATCH_CLIENT,
 	'src/blocks-interactivity/ad-slot/viewport.js',
 	'src/blocks-interactivity/ad-slot/empty.js',

@@ -217,7 +217,7 @@ final class Upload_Rules {
 	 * deciding separately is how one of them ends up enforcing nothing.
 	 *
 	 * @param int $configured What the placement has stored, 0 when unset.
-	 * @return int
+	 * @return positive-int
 	 */
 	public static function resolve_max_bytes( int $configured ): int {
 		if ( $configured < 1 ) {

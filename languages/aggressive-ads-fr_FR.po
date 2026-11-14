@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-11-14T05:34:38+00:00\n"
+"POT-Creation-Date: 2026-11-14T11:11:27+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -446,8 +446,8 @@ msgstr ""
 #: inc/Admin/class-placement-screen.php:171
 #: inc/Admin/class-review-screen.php:375
 #: templates/portal/partials/campaign-overlays.php:304
-#: templates/portal/partials/campaign-overlays.php:362
-#: templates/portal/partials/campaign-variant-artwork.php:85
+#: templates/portal/partials/campaign-overlays.php:363
+#: templates/portal/partials/campaign-variant-artwork.php:86
 msgid "Cancel"
 msgstr ""
 
@@ -2097,7 +2097,7 @@ msgstr ""
 #: inc/Workflow/class-campaign-change-summary.php:82
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:128
-#: templates/portal/partials/campaign-upload-form.php:167
+#: templates/portal/partials/campaign-upload-form.php:169
 #: templates/portal/screens/campaign.php:661
 msgid "Destination"
 msgstr ""
@@ -2788,8 +2788,8 @@ msgid "A start date that has already passed cannot be moved."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:218
-#: templates/portal/partials/campaign-overlays.php:352
-#: templates/portal/partials/campaign-upload-form.php:173
+#: templates/portal/partials/campaign-overlays.php:353
+#: templates/portal/partials/campaign-upload-form.php:175
 msgid "Destination URL"
 msgstr ""
 
@@ -3465,7 +3465,7 @@ msgid "Placement group"
 msgstr ""
 
 #: inc/Install/class-assignment-health.php:57
-#: inc/Install/class-assignment-health.php:108
+#: inc/Install/class-assignment-health.php:130
 msgid "Every creative has a delivery assignment"
 msgstr ""
 
@@ -3473,59 +3473,91 @@ msgstr ""
 msgid "Image eligibility upgrade"
 msgstr "Mise à niveau de la diffusion des images"
 
-#: inc/Install/class-assignment-health.php:80
+#: inc/Install/class-assignment-health.php:65
+msgid "Static HTML5 runtime"
+msgstr "Environnement HTML5 statique"
+
+#: inc/Install/class-assignment-health.php:81
+msgid "Static HTML5 runtime is available"
+msgstr "L’environnement HTML5 statique est disponible"
+
+#: inc/Install/class-assignment-health.php:81
+msgid "Static HTML5 runtime is unavailable"
+msgstr "L’environnement HTML5 statique est indisponible"
+
+#: inc/Install/class-assignment-health.php:83
+msgid ""
+"Staff may upload the supported static HTML5 profile with a reviewed raster "
+"fallback. Script and external modes remain unavailable. This check does not "
+"verify every published resource."
+msgstr "L’équipe peut téléverser le profil HTML5 statique pris en charge avec une image de remplacement validée. Les scripts et les modes externes restent indisponibles. Ce contrôle ne vérifie pas chaque ressource publiée."
+
+#: inc/Install/class-assignment-health.php:84
+msgid ""
+"Static HTML5 requires PHP 8.4 or later with ZIP and the HTML5 DOM parser, "
+"plus the completed image eligibility schema. Existing image delivery remains "
+"available. See the plugin runbook."
+msgstr "Le HTML5 statique nécessite PHP 8.4 ou ultérieur avec ZIP et l’analyseur DOM HTML5, ainsi que le schéma de diffusion des images à jour. La diffusion des images existantes reste disponible. Consultez le guide d’exploitation du plugin."
+
+#: inc/Install/class-assignment-health.php:102
 msgid "Image eligibility upgrade is complete"
 msgstr "La mise à niveau de la diffusion des images est terminée"
 
-#: inc/Install/class-assignment-health.php:80
+#: inc/Install/class-assignment-health.php:102
 msgid "Image eligibility upgrade needs attention"
 msgstr "La mise à niveau de la diffusion des images nécessite une intervention"
 
-#: inc/Install/class-assignment-health.php:82
+#: inc/Install/class-assignment-health.php:104
 msgid ""
 "The image eligibility schema and bounded projection upgrade are complete. "
 "This check does not verify every media file."
-msgstr "Le schéma et la mise à jour par lots de la diffusion des images sont terminés. Ce contrôle ne vérifie pas chaque fichier multimédia."
+msgstr ""
+"Le schéma et la mise à jour par lots de la diffusion des images sont "
+"terminés. Ce contrôle ne vérifie pas chaque fichier multimédia."
 
-#: inc/Install/class-assignment-health.php:83
+#: inc/Install/class-assignment-health.php:105
 msgid ""
 "Complete the database upgrade and check scheduled image projection work. "
 "Existing single-image ads retain their compatibility path; responsive "
 "uploads require the new schema. See the plugin runbook for recovery."
-msgstr "Terminez la mise à niveau de la base de données et vérifiez le traitement planifié des images. Les annonces existantes à image unique restent compatibles ; les téléversements adaptatifs nécessitent le nouveau schéma. Consultez le guide d’exploitation du plugin pour la récupération."
+msgstr ""
+"Terminez la mise à niveau de la base de données et vérifiez le traitement "
+"planifié des images. Les annonces existantes à image unique restent "
+"compatibles ; les téléversements adaptatifs nécessitent le nouveau schéma. "
+"Consultez le guide d’exploitation du plugin pour la récupération."
 
-#: inc/Install/class-assignment-health.php:98
+#: inc/Install/class-assignment-health.php:120
 msgid "The creative assignment table is missing"
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:99
+#: inc/Install/class-assignment-health.php:121
 msgid ""
 "A database upgrade has not completed. Deactivating and reactivating the "
 "plugin runs it again."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:109
+#: inc/Install/class-assignment-health.php:131
 msgid "The delivery model upgrade has covered every creative on this site."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:118
+#: inc/Install/class-assignment-health.php:140
 msgid "The delivery model upgrade is still running"
 msgstr ""
 
 #. translators: %d: number of creatives not yet migrated.
-#: inc/Install/class-assignment-health.php:121
+#: inc/Install/class-assignment-health.php:143
 #, php-format
 msgid ""
 "%d creatives are waiting. This runs in the background and nothing is "
 "affected while it does — advertising continues to serve normally."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:129
+#: inc/Install/class-assignment-health.php:151
 msgid "Some creatives have no delivery assignment"
 msgstr ""
 
 #. translators: %d: number of creatives left behind.
-#: inc/Install/class-assignment-health.php:132
+#: inc/Install/class-assignment-health.php:154
 #, php-format
 msgid ""
 "%d creatives were skipped by the delivery model upgrade, which reports "
@@ -3533,7 +3565,7 @@ msgid ""
 "campaign or placement is expected here; anything else is worth reporting."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:151
+#: inc/Install/class-assignment-health.php:173
 #: inc/Install/class-conversion-health.php:285
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
@@ -4277,34 +4309,34 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:818
 #: inc/Portal/class-campaign-change-form.php:125
-#: inc/Workflow/class-campaign-validator.php:239
+#: inc/Workflow/class-campaign-validator.php:242
 msgid "Choose an end date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:819
 #: inc/Portal/class-campaign-change-form.php:126
 #: inc/Workflow/class-campaign-editor.php:455
-#: inc/Workflow/class-campaign-validator.php:242
+#: inc/Workflow/class-campaign-validator.php:245
 msgid "The end date must be after the start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:820
-#: inc/Workflow/class-campaign-validator.php:230
+#: inc/Workflow/class-campaign-validator.php:233
 msgid "Choose a start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:821
-#: inc/Workflow/class-campaign-validator.php:233
+#: inc/Workflow/class-campaign-validator.php:236
 msgid "The start date has already passed. Choose a later one."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:822
-#: inc/Workflow/class-campaign-validator.php:236
+#: inc/Workflow/class-campaign-validator.php:239
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:823
-#: inc/Workflow/class-campaign-validator.php:245
+#: inc/Workflow/class-campaign-validator.php:248
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 
@@ -4376,7 +4408,7 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:837
-#: inc/Workflow/class-campaign-copier.php:330
+#: inc/Workflow/class-campaign-copier.php:331
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 
@@ -4958,18 +4990,22 @@ msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:279
 #: inc/Workflow/class-campaign-validator.php:213
-#: inc/Workflow/class-image-handler.php:168
+#: inc/Workflow/class-image-handler.php:151
 msgid ""
 "Choose a base image and up to five different renditions in the placement’s "
 "supported sizes, totaling no more than 2 MB."
-msgstr "Choisissez une image principale et jusqu’à cinq variantes différentes aux dimensions prises en charge par l’emplacement, pour un total maximal de 2 Mo."
+msgstr ""
+"Choisissez une image principale et jusqu’à cinq variantes différentes aux "
+"dimensions prises en charge par l’emplacement, pour un total maximal de 2 Mo."
 
 #: inc/Portal/class-creative-feedback.php:280
 #: inc/Workflow/class-image-handler.php:47
 msgid ""
 "Responsive image delivery is not ready. Ask the publisher to complete the "
 "database upgrade, then try again."
-msgstr "La diffusion d’images adaptatives n’est pas prête. Demandez à l’éditeur de terminer la mise à niveau de la base de données, puis réessayez."
+msgstr ""
+"La diffusion d’images adaptatives n’est pas prête. Demandez à l’éditeur de "
+"terminer la mise à niveau de la base de données, puis réessayez."
 
 #: inc/Portal/class-creative-feedback.php:281
 msgid "No file was received. Choose an ad creative and try again."
@@ -4999,7 +5035,7 @@ msgstr ""
 
 #. translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF.
 #: inc/Portal/class-creative-feedback.php:292
-#: inc/Workflow/class-creative-uploader.php:189
+#: inc/Workflow/class-creative-uploader.php:196
 #, php-format
 msgid "That file type is not supported. Supported formats: %s."
 msgstr ""
@@ -5060,7 +5096,7 @@ msgstr ""
 #: inc/Portal/class-creative-feedback.php:361
 #: inc/Workflow/class-creative-manager.php:235
 #: inc/Workflow/class-creative-manager.php:280
-#: inc/Workflow/class-image-handler.php:156
+#: inc/Workflow/class-image-handler.php:139
 msgid "The creative could not be saved. Please try again."
 msgstr ""
 
@@ -5609,7 +5645,7 @@ msgid "That advertiser could not be found."
 msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:500
-#: inc/REST/class-creative-file-controller.php:414
+#: inc/REST/class-creative-file-controller.php:423
 #: inc/REST/class-line-items-controller.php:366
 #: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
@@ -5628,11 +5664,19 @@ msgstr ""
 msgid "That conversion could not be recorded."
 msgstr ""
 
-#: inc/REST/class-creative-file-controller.php:274
+#: inc/REST/class-creative-file-controller.php:219
+msgid "Static HTML5 creative"
+msgstr "Création HTML5 statique"
+
+#: inc/REST/class-creative-file-controller.php:221
+msgid "Raster fallback"
+msgstr "Image de remplacement"
+
+#: inc/REST/class-creative-file-controller.php:283
 msgid "Preview unavailable"
 msgstr ""
 
-#: inc/REST/class-creative-file-controller.php:292
+#: inc/REST/class-creative-file-controller.php:301
 msgid "Advertisement preview"
 msgstr ""
 
@@ -5979,10 +6023,11 @@ msgstr ""
 msgid "The creative encryption key could not be read or created."
 msgstr ""
 
-#: inc/Storage/class-private-storage.php:160
-#: inc/Storage/class-private-storage.php:170
-#: inc/Storage/class-private-storage.php:183
-#: inc/Storage/class-private-storage.php:203
+#: inc/Storage/class-private-storage.php:114
+#: inc/Storage/class-private-storage.php:214
+#: inc/Storage/class-private-storage.php:224
+#: inc/Storage/class-private-storage.php:237
+#: inc/Storage/class-private-storage.php:257
 msgid "The upload could not be saved. Please try again."
 msgstr ""
 
@@ -6190,7 +6235,7 @@ msgstr ""
 msgid "Open-ended"
 msgstr ""
 
-#: inc/Workflow/class-campaign-copier.php:260
+#: inc/Workflow/class-campaign-copier.php:261
 #: inc/Workflow/class-campaign-editor.php:161
 msgid "Untitled campaign"
 msgstr ""
@@ -6281,48 +6326,55 @@ msgid "Every placement needs its own creative."
 msgstr ""
 
 #: inc/Workflow/class-campaign-validator.php:207
-msgid "Only image creatives can be submitted."
-msgstr ""
+msgid ""
+"Use image creative or a supported static HTML5 package uploaded by staff."
+msgstr "Utilisez une création image ou un paquet HTML5 statique pris en charge et téléversé par l’équipe."
 
 #: inc/Workflow/class-campaign-validator.php:210
 msgid "A creative is attached to a placement this campaign has not selected."
 msgstr ""
 
+#: inc/Workflow/class-campaign-validator.php:216
+msgid ""
+"This HTML5 package no longer fits the placement’s current file limit. "
+"Replace it with a smaller package or image creative."
+msgstr "Ce paquet HTML5 dépasse la limite actuelle de taille de fichier de l’emplacement. Remplacez-le par un paquet plus petit ou une création image."
+
 #. translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300.
-#: inc/Workflow/class-campaign-validator.php:218
+#: inc/Workflow/class-campaign-validator.php:221
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:224
+#: inc/Workflow/class-campaign-validator.php:227
 msgid "Every creative needs a destination URL."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:227
+#: inc/Workflow/class-campaign-validator.php:230
 msgid "A destination URL is not a valid http or https address."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:248
+#: inc/Workflow/class-campaign-validator.php:251
 msgid "This organization cannot submit campaigns. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:251
+#: inc/Workflow/class-campaign-validator.php:254
 msgid "This campaign is not connected to an organization. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:254
+#: inc/Workflow/class-campaign-validator.php:257
 msgid "Choose a package before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:257
+#: inc/Workflow/class-campaign-validator.php:260
 msgid "The package on this campaign is no longer offered. Choose another one."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:260
+#: inc/Workflow/class-campaign-validator.php:263
 msgid "This campaign has no price recorded. Choose its package again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:263
+#: inc/Workflow/class-campaign-validator.php:266
 msgid "This campaign is not ready to submit."
 msgstr ""
 
@@ -6478,7 +6530,7 @@ msgstr ""
 msgid "You do not have permission to update that ad."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:524
+#: inc/Workflow/class-creative-change-manager.php:525
 msgid "The uploaded dimensions do not match this placement."
 msgstr ""
 
@@ -6555,36 +6607,36 @@ msgstr ""
 msgid "This creative’s file could not be found."
 msgstr ""
 
-#: inc/Workflow/class-creative-uploader.php:177
+#: inc/Workflow/class-creative-uploader.php:184
 msgid "No file was received. Please choose a file and try again."
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Workflow/class-creative-uploader.php:180
+#: inc/Workflow/class-creative-uploader.php:187
 #, php-format
 msgid ""
 "That file is larger than %s. Please save it at a smaller size and try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-uploader.php:183
+#: inc/Workflow/class-creative-uploader.php:190
 msgid ""
 "That ad creative has too many pixels to process. Please save it at the size "
 "the placement asks for."
 msgstr ""
 
 #. translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF.
-#: inc/Workflow/class-creative-uploader.php:185
+#: inc/Workflow/class-creative-uploader.php:192
 #, php-format
 msgid "That file is not an image we can read. Supported formats: %s."
 msgstr ""
 
-#: inc/Workflow/class-creative-uploader.php:186
+#: inc/Workflow/class-creative-uploader.php:193
 msgid ""
 "That file does not match the type its name suggests, so it has not been "
 "accepted."
 msgstr ""
 
-#: inc/Workflow/class-creative-uploader.php:187
+#: inc/Workflow/class-creative-uploader.php:194
 msgid "The upload did not complete. Please try again."
 msgstr ""
 
@@ -6592,9 +6644,27 @@ msgstr ""
 msgid "The confirmation email could not be sent."
 msgstr ""
 
-#: inc/Workflow/class-image-publication.php:200
+#: inc/Workflow/class-html5-handler.php:41
+msgid "Only campaign reviewers may upload HTML5 creative."
+msgstr "Seules les personnes chargées de valider les campagnes peuvent téléverser des créations HTML5."
+
+#: inc/Workflow/class-html5-handler.php:44
+msgid ""
+"Static HTML5 delivery is unavailable. Ask the publisher to check the runtime "
+"and database upgrade."
+msgstr "La diffusion HTML5 statique est indisponible. Demandez à l’éditeur de vérifier l’environnement et la mise à jour de la base de données."
+
+#: inc/Workflow/class-html5-handler.php:190
+msgid ""
+"Use a static HTML5 ZIP with one index.html, supported local styles and "
+"raster images, plus a matching raster fallback. Scripts, external resources "
+"and unsafe or oversized archives are not accepted."
+msgstr "Utilisez un ZIP HTML5 statique avec un seul index.html, des styles locaux et des images pris en charge, ainsi qu’une image de remplacement aux dimensions requises. Les scripts, ressources externes et archives dangereuses ou trop volumineuses sont refusés."
+
+#: inc/Workflow/class-image-publication.php:229
 msgid "The image set could not be verified and published. Please try again."
-msgstr "Impossible de vérifier et de publier l’ensemble d’images. Veuillez réessayer."
+msgstr ""
+"Impossible de vérifier et de publier l’ensemble d’images. Veuillez réessayer."
 
 #: inc/Workflow/class-line-item-editor.php:50
 msgid "The campaign delivery strategy could not be created."
@@ -7332,7 +7402,7 @@ msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:384
 #: templates/portal/partials/campaign-order-summary.php:100
-#: templates/portal/partials/campaign-overlays.php:364
+#: templates/portal/partials/campaign-overlays.php:365
 #: templates/portal/partials/campaign-review-step.php:381
 msgid "Submit for review"
 msgstr ""
@@ -7536,6 +7606,19 @@ msgstr ""
 msgid "Review and submit"
 msgstr ""
 
+#: templates/portal/partials/campaign-html5-fallback.php:23
+msgid "HTML5 raster fallback"
+msgstr "Image de remplacement HTML5"
+
+#: templates/portal/partials/campaign-html5-fallback.php:24
+msgid ""
+"For static HTML5, choose a ZIP as the creative file and a matching raster "
+"fallback here. Review covers both; all files in an approved package become "
+"public. Use one index.html, supported local styles and raster assets. "
+"Scripts and external resources are unavailable. Leave this field empty for "
+"an image creative."
+msgstr "Pour le HTML5 statique, choisissez un ZIP comme fichier de création et ici une image de remplacement aux dimensions requises. Les deux sont validés ; tous les fichiers d’un paquet approuvé deviennent publics. Utilisez un seul index.html, des styles locaux et des images pris en charge. Les scripts et les ressources externes sont indisponibles. Laissez ce champ vide pour une création image."
+
 #: templates/portal/partials/campaign-more-actions.php:49
 msgid "More actions"
 msgstr ""
@@ -7689,7 +7772,7 @@ msgid "Custom run dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-overlays.php:242
-#: templates/portal/partials/campaign-variant-artwork.php:86
+#: templates/portal/partials/campaign-variant-artwork.php:87
 msgid "Replace artwork"
 msgstr ""
 
@@ -7724,7 +7807,7 @@ msgid "Replacement ad creative (optional)"
 msgstr ""
 
 #. translators: 1: required creative dimensions, for example 728x90. 2: the accepted image formats, e.g. JPEG, PNG, GIF.
-#: templates/portal/partials/campaign-overlays.php:343
+#: templates/portal/partials/campaign-overlays.php:344
 #, php-format
 msgid "Exactly %1$s. %2$s. Leave this empty to change only the destination."
 msgstr ""
@@ -7783,7 +7866,11 @@ msgid ""
 "Add up to five different sizes from: %s. Include the base image above. Each "
 "file must meet the placement limit; all images together must be at most 2 "
 "MB. Review covers the whole set."
-msgstr "Ajoutez jusqu’à cinq dimensions différentes parmi : %s. Incluez l’image principale ci-dessus. Chaque fichier doit respecter la limite de l’emplacement ; l’ensemble des images ne doit pas dépasser 2 Mo. La validation porte sur tout l’ensemble."
+msgstr ""
+"Ajoutez jusqu’à cinq dimensions différentes parmi : %s. Incluez l’image "
+"principale ci-dessus. Chaque fichier doit respecter la limite de "
+"l’emplacement ; l’ensemble des images ne doit pas dépasser 2 Mo. La "
+"validation porte sur tout l’ensemble."
 
 #: templates/portal/partials/campaign-reports.php:58
 msgid "Open campaign"
@@ -8178,69 +8265,77 @@ msgstr ""
 msgid "Ad update history"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:80
+#: templates/portal/partials/campaign-upload-form.php:82
+msgid ""
+"Choose image artwork or a static HTML5 ZIP and its raster fallback, then "
+"select Upload creative."
+msgstr "Choisissez une création image ou un ZIP HTML5 statique avec son image de remplacement, puis sélectionnez Téléverser la création."
+
+#: templates/portal/partials/campaign-upload-form.php:82
 msgid ""
 "Choose the base image and any optional renditions, then select Upload "
 "creative."
-msgstr "Choisissez l’image principale et les variantes souhaitées, puis sélectionnez Téléverser le visuel."
+msgstr ""
+"Choisissez l’image principale et les variantes souhaitées, puis sélectionnez "
+"Téléverser le visuel."
 
-#: templates/portal/partials/campaign-upload-form.php:82
+#: templates/portal/partials/campaign-upload-form.php:84
 msgid ""
 "Uploads by itself: choose a file, enter its link, and the upload starts when "
 "you leave the link field."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:83
+#: templates/portal/partials/campaign-upload-form.php:85
 msgid ""
 "Uploads as soon as you choose a file, linking to the address below unless "
 "you change it first."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:89
+#: templates/portal/partials/campaign-upload-form.php:91
 msgid "Ad creative file"
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: templates/portal/partials/campaign-upload-form.php:94
+#: templates/portal/partials/campaign-upload-form.php:96
 #, php-format
 msgid "Maximum file size: %s."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:125
+#: templates/portal/partials/campaign-upload-form.php:127
 msgid "Uploading"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:130
+#: templates/portal/partials/campaign-upload-form.php:132
 #, php-format
 msgid "Upload progress for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:133
+#: templates/portal/partials/campaign-upload-form.php:135
 msgid "Cancel upload"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:141
+#: templates/portal/partials/campaign-upload-form.php:143
 msgid "Download template"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:145
+#: templates/portal/partials/campaign-upload-form.php:147
 #, php-format
 msgid "for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:169
+#: templates/portal/partials/campaign-upload-form.php:171
 msgid "Use a different link"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:174
+#: templates/portal/partials/campaign-upload-form.php:176
 msgid ""
 "Where someone should go after selecting the advertisement. Use a complete "
 "http or https URL."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:186
+#: templates/portal/partials/campaign-upload-form.php:189
 msgid "Upload creative"
 msgstr ""
 

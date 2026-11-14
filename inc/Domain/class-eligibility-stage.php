@@ -71,7 +71,7 @@ final class Eligibility_Stage implements Decision_Stage {
 				 */
 				$requested     = (string) ( $context->facts['size'] ?? '' );
 				$image_version = (int) ( $row['image_version'] ?? 0 );
-				if ( 0 !== $image_version && ( Image_Set::VERSION !== $image_version || 1 !== preg_match( '/\A[0-9a-f]{64}\z/', (string) ( $row['image_hash'] ?? '' ) ) ) ) {
+				if ( 0 !== $image_version && ( ! in_array( $image_version, array( Image_Set::VERSION, 2 ), true ) || 1 !== preg_match( '/\A[0-9a-f]{64}\z/', (string) ( $row['image_hash'] ?? '' ) ) ) ) {
 					$evaluated[] = $candidate->exclude( $this->name(), Exclusion_Reason::ELIGIBILITY_MISSING_ATTACHMENT );
 					continue;
 				}

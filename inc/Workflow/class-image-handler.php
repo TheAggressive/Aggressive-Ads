@@ -86,24 +86,7 @@ final class Image_Handler {
 			if ( null === $artifact ) {
 				return $this->error();
 			}
-			$temp = wp_tempnam( 'aggr-image-set' );
-			if ( '' === $temp ) {
-				return $this->storage_error();
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod, WordPressVIPMinimum.Functions.RestrictedFunctions.chmod_chmod -- Core wp_tempnam() file, not a durable filesystem write; plaintext creative bytes must be owner-readable only before writing.
-			if ( ! chmod( $temp, 0600 ) ) {
-				wp_delete_file( $temp );
-				return $this->storage_error();
-			}
-			try {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_put_contents -- Core temporary/upload directory and generated filename; Bounded generated plaintext source, removed in finally; durable storage encrypts it.
-				if ( strlen( $artifact ) !== file_put_contents( $temp, $artifact ) ) {
-					return $this->storage_error();
-				}
-				$stored = $this->storage->store( $temp, Image_Set::EXTENSION );
-			} finally {
-				wp_delete_file( $temp );
-			}
+			$stored = $this->storage->store_bytes( $artifact, Image_Set::EXTENSION );
 			if ( is_wp_error( $stored ) ) {
 				return $stored;
 			}
