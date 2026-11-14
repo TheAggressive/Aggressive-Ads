@@ -68,6 +68,8 @@ An additional real-workflow interleaving test completes a second replacement
 during the first upload's inspection; the stale writer is refused and the
 completed source survives. Removing the expected-source hash check makes that
 regression fail as well.
+Both real private-image REST routes also reject nested/malformed rendition
+query values; removing the declared size validation makes that regression fail.
 The browser cases exercise explicit and scriptless ingestion, invalid nonce
 refusal, 320px reflow/axe, the unchanged empty sandbox, both served image sizes
 and one impression request per rendered page. Full CI remains required for the
@@ -99,7 +101,8 @@ P2 and [P17](platform-p17-creative-experience.md) are complete. Keep their revis
 ownership, variant, approval and measurement guarantees. PR #371's complete CI
 baseline is green; rerun the required baseline for each implementation head.
 
-The handler boundary is currently conceptual, not an implemented registry:
+The table records the P17 seams audited before #374. Responsive images now use
+the concrete handler above; a general provider registry is still outside P18:
 
 | Existing authority | P18 change required |
 |---|---|

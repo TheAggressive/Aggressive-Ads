@@ -284,6 +284,19 @@ final class ResponsiveImagesTest extends WP_UnitTestCase {
 		$this->assertWPError( $controller->prepare( $id, '320x50' ) );
 	}
 
+	/** Nested query shapes are refused by both real REST routes before raster extraction. */
+	public function test_private_image_routes_validate_rendition_query_types(): void {
+		$id = $this->upload_set();
+		do_action( 'rest_api_init', rest_get_server() );
+		foreach ( array( 'file', 'preview' ) as $route ) {
+			foreach ( array( array( '320x50' ), '../../unrelated', '320x50\r\n' ) as $size ) {
+				$request = new \WP_REST_Request( 'GET', '/aggr/v1/creatives/' . $id . '/' . $route );
+				$request->set_query_params( array( 'size' => $size ) );
+				$this->assertSame( 400, rest_get_server()->dispatch( $request )->get_status() );
+			}
+		}
+	}
+
 	/** Upload through the shared authorization, inspection and persistence path. */
 	private function upload_set(): int {
 		$file               = $this->image_file( 728, 90, 1 );

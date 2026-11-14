@@ -132,6 +132,11 @@ final class Creative_File_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
+		$size_arg = array(
+			'type'              => 'string',
+			'default'           => '',
+			'validate_callback' => static fn ( $value ): bool => is_string( $value ) && ( '' === $value || \Aggressive\Ads\Domain\Ad_Sizes::is_valid( $value ) ),
+		);
 		self::register_route(
 			'/creatives/(?P<id>\d+)/preview',
 			array(
@@ -139,7 +144,8 @@ final class Creative_File_Controller implements Service {
 				'callback'            => array( $this, 'preview' ),
 				'permission_callback' => array( $this, 'permission' ),
 				'args'                => array(
-					'id' => array(
+					'size' => $size_arg,
+					'id'   => array(
 						'type'              => 'integer',
 						'required'          => true,
 						'sanitize_callback' => 'absint',
@@ -156,7 +162,8 @@ final class Creative_File_Controller implements Service {
 				'callback'            => array( $this, 'handle' ),
 				'permission_callback' => array( $this, 'permission' ),
 				'args'                => array(
-					'id' => array(
+					'size' => $size_arg,
+					'id'   => array(
 						'type'              => 'integer',
 						'required'          => true,
 						'sanitize_callback' => 'absint',
