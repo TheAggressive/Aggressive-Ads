@@ -320,7 +320,7 @@ final class Decision_Engine {
 	public function payload_from_row( array $row, int $placement_id, string $size = '' ): ?array {
 		$resource = null;
 		if ( 0 !== (int) ( $row['image_version'] ?? 0 ) ) {
-			if ( 1 !== (int) $row['image_version'] ) {
+			if ( ! in_array( (int) $row['image_version'], array( 1, 2 ), true ) ) {
 				return null;
 			}
 			$resource = ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->delivery( $row, $size );
@@ -336,7 +336,7 @@ final class Decision_Engine {
 		}
 
 		return array(
-			'format'        => 'image',
+			'format'        => 2 === (int) ( $row['image_version'] ?? 0 ) && \Aggressive\Ads\Support\Html5_Runtime::available() ? 'html5-static' : 'image',
 			'formatVersion' => 1,
 			'image'         => $image,
 			'alt'           => null === $resource ? (string) ( $row['alt_text'] ?? '' ) : $resource['alt'],
@@ -355,6 +355,10 @@ final class Decision_Engine {
 			 * same to `fill.js`, and only one of them is a decision.
 			 */
 			'sameTab'       => false,
+			...( null !== $resource && isset( $resource['document'], $resource['documentHash'] ) ? array(
+				'document'     => $resource['document'],
+				'documentHash' => $resource['documentHash'],
+			) : array() ),
 		);
 	}
 }

@@ -61,6 +61,32 @@ final class Creative_Source {
 		if ( null === $set ) {
 			return null;
 		}
+		if ( isset( $set['package'] ) ) {
+			$archive = $this->storage->temporary_bytes( $set['package']['archive'] );
+			$image   = $this->storage->temporary_bytes( $set['package']['image'] );
+			if ( null === $archive || null === $image ) {
+				foreach ( array( $archive, $image ) as $path ) {
+					if ( null !== $path ) {
+						wp_delete_file( $path );
+					}
+				}
+				return null;
+			}
+			$base = $set['manifest']['resources'][ $set['manifest']['base'] ];
+			return array(
+				'file'      => array(
+					'tmp_name' => $archive,
+					'name'     => 'creative.zip',
+					'error'    => UPLOAD_ERR_OK,
+					'fallback' => array(
+						'tmp_name' => $image,
+						'name'     => $base['name'],
+						'error'    => UPLOAD_ERR_OK,
+					),
+				),
+				'temporary' => array( $archive, $image ),
+			);
+		}
 		$files     = array();
 		$temporary = array();
 		$complete  = false;

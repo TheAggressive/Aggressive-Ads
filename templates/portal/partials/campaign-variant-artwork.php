@@ -67,7 +67,7 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 			id="<?php echo esc_attr( $aggr_artwork_field ); ?>"
 			name="file"
 			type="file"
-			accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>"
+			accept="<?php echo esc_attr( Upload_Rules::accept_attribute() . ( current_user_can( \Aggressive\Ads\Security\Capabilities::REVIEW_CAMPAIGNS ) ? ',.zip' : '' ) ); ?>"
 			required
 		>
 	</div>
@@ -76,6 +76,7 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 	$aggr_rendition_placement = (int) ( $aggr_creative['placement_id'] ?? 0 );
 	$aggr_rendition_key       = 'artwork-' . $aggr_artwork_creative;
 	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-html5-fallback.php';
 	?>
 	<div class="aggr-overlay__actions">
 		<a

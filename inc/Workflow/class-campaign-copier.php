@@ -221,6 +221,7 @@ final class Campaign_Copier {
 					'height'   => $creative['height'],
 					'name'     => $file['name'],
 					'manifest' => $file['manifest'] ?? null,
+					'html5'    => $file['html5'] ?? null,
 				)
 			);
 

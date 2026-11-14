@@ -59,7 +59,7 @@ final class Creative_Manager {
 	 * @param Creative_Repository            $creatives  Creative persistence.
 	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
 	 * @param Placement_Repository           $placements Placement persistence.
-	 * @param Image_Handler                  $uploader   Hostile-file validation.
+	 * @param Creative_Ingestion             $uploader   Hostile-file validation.
 	 * @param Private_Storage                $storage    Private file storage.
 	 * @param Rate_Limiter                   $limiter    Upload abuse bounding.
 	 * @param Audit_Repository               $audit      Audit persistence.
@@ -73,7 +73,7 @@ final class Creative_Manager {
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Placement_Repository $placements,
-		private readonly Image_Handler $uploader,
+		private readonly Creative_Ingestion $uploader,
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
@@ -292,8 +292,8 @@ final class Creative_Manager {
 					'placement_id' => $placement_id,
 					'width'        => $accepted['width'],
 					'height'       => $accepted['height'],
-					'bytes'        => Image_Handler::summary( $accepted )['bytes'],
-					'mime'         => Image_Handler::summary( $accepted )['mime'],
+					'bytes'        => Creative_Ingestion::summary( $accepted )['bytes'],
+					'mime'         => Creative_Ingestion::summary( $accepted )['mime'],
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -314,8 +314,8 @@ final class Creative_Manager {
 			'placement_id' => $placement_id,
 			'width'        => $accepted['width'],
 			'height'       => $accepted['height'],
-			'mime'         => Image_Handler::summary( $accepted )['mime'],
-			'bytes'        => Image_Handler::summary( $accepted )['bytes'],
+			'mime'         => Creative_Ingestion::summary( $accepted )['mime'],
+			'bytes'        => Creative_Ingestion::summary( $accepted )['bytes'],
 			'name'         => $accepted['name'],
 		);
 	}
@@ -535,8 +535,8 @@ final class Creative_Manager {
 			'placement_id' => $placement_id,
 			'width'        => $accepted['width'],
 			'height'       => $accepted['height'],
-			'mime'         => Image_Handler::summary( $accepted )['mime'],
-			'bytes'        => Image_Handler::summary( $accepted )['bytes'],
+			'mime'         => Creative_Ingestion::summary( $accepted )['mime'],
+			'bytes'        => Creative_Ingestion::summary( $accepted )['bytes'],
 			'name'         => $accepted['name'],
 		);
 	}

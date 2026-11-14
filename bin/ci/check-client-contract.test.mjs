@@ -24,6 +24,7 @@ const FILES = {
 	controller: 'inc/REST/class-fill-controller.php',
 	view: 'src/blocks-interactivity/ad-slot/view.js',
 	fill: 'src/blocks-interactivity/ad-slot/fill.js',
+	staticHtml5: 'src/blocks-interactivity/ad-slot/static-html5.js',
 	empty: 'src/blocks-interactivity/ad-slot/empty.js',
 	rotation: 'src/blocks-interactivity/ad-slot/rotation.js',
 	renderer: 'inc/Workflow/class-placement-slot.php',
@@ -103,6 +104,7 @@ async function root( overrides = {} ) {
 		[ FILES.view ]:
 			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait pageDecisions();\nawait fillSlot( root, rotations );\n',
 		[ FILES.fill ]: BASE_FILL,
+		[ FILES.staticHtml5 ]: '',
 		[ FILES.empty ]:
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
 		[ FILES.rotation ]:

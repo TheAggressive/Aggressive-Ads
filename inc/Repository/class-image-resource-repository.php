@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Image_Set;
+use Aggressive\Ads\Domain\Html5_Profile;
 
 /** The source snapshot is authoritative; legacy file fields remain a rollback projection. */
 final class Image_Resource_Repository {
@@ -43,7 +44,7 @@ final class Image_Resource_Repository {
 	 */
 	private static function decode_source( string $raw ): array|false {
 		$value = json_decode( $raw, true, 12 );
-		if ( ! is_array( $value ) || 3 !== count( $value ) || 1 !== ( $value['version'] ?? null ) || ! Image_Set::valid( $value['manifest'] ?? null ) || ! is_array( $value['upload'] ?? null ) || 8 !== count( $value['upload'] ) ) {
+		if ( ! is_array( $value ) || ! in_array( $value['version'] ?? null, array( 1, 2 ), true ) || ( 2 === $value['version'] ? 4 : 3 ) !== count( $value ) || ! Image_Set::valid( $value['manifest'] ?? null ) || ! is_array( $value['upload'] ?? null ) || 8 !== count( $value['upload'] ) ) {
 			return false;
 		}
 		$upload = $value['upload'];
@@ -57,11 +58,14 @@ final class Image_Resource_Repository {
 				return false;
 			}
 		}
-		if ( 1 !== preg_match( '/\A[0-9a-f]{64}\z/', $upload['sha256'] ) || $upload['bytes'] > Image_Set::MAX_ENCODED_BYTES ) {
+		if ( 1 !== preg_match( '/\A[0-9a-f]{64}\z/', $upload['sha256'] ) || $upload['bytes'] > ( 2 === $value['version'] ? Html5_Profile::MAX_ARTIFACT : Image_Set::MAX_ENCODED_BYTES ) ) {
+			return false;
+		}
+		if ( 2 === $value['version'] && ( ! Html5_Profile::valid( $value['html5'] ?? null ) || Html5_Profile::MIME !== $upload['mime'] || Image_Set::fingerprint( $value['manifest'] ) !== $value['html5']['fallback_hash'] || 1 !== count( $value['manifest']['resources'] ) ) ) {
 			return false;
 		}
 		$base = $value['manifest']['resources'][ $value['manifest']['base'] ];
-		if ( $upload['width'] !== $base['width'] || $upload['height'] !== $base['height'] || ( count( $value['manifest']['resources'] ) > 1 ? Image_Set::MIME !== $upload['mime'] : $base['mime'] !== $upload['mime'] ) ) {
+		if ( $upload['width'] !== $base['width'] || $upload['height'] !== $base['height'] || ( 2 === $value['version'] ? Html5_Profile::MIME !== $upload['mime'] : ( count( $value['manifest']['resources'] ) > 1 ? Image_Set::MIME !== $upload['mime'] : $base['mime'] !== $upload['mime'] ) ) ) {
 			return false;
 		}
 		return $value;
@@ -101,6 +105,12 @@ final class Image_Resource_Repository {
 					return false;
 				}
 			}
+			$html5 = $upload['html5'] ?? null;
+			if ( null !== $html5 && ( ! Html5_Profile::valid( $html5 ) || null === $manifest || Html5_Profile::MIME !== $upload['mime'] || Image_Set::fingerprint( $manifest ) !== $html5['fallback_hash'] ) ) {
+				return false;
+			}
+			$kind     = null !== $html5 ? 'html5' : 'image';
+			$old_kind = get_post_meta( $id, Creative_Repository::META_KIND, true );
 			$columns  = self::file_columns();
 			$previous = array();
 			foreach ( $columns as $field => $key ) {
@@ -110,27 +120,32 @@ final class Image_Resource_Repository {
 			if ( isset( $upload['expected_sha256'] ) && $upload['expected_sha256'] !== $current_hash ) {
 				return false;
 			}
+			update_post_meta( $id, Creative_Repository::META_KIND, $kind );
 			foreach ( $columns as $field => $key ) {
 				update_post_meta( $id, $key, wp_slash( $upload[ $field ] ) );
 			}
 			wp_cache_delete( $id, 'post_meta' );
-			$good = true;
+			$good = get_post_meta( $id, Creative_Repository::META_KIND, true ) === $kind;
 			foreach ( $columns as $field => $key ) {
 				$good = $good && (string) get_post_meta( $id, $key, true ) === (string) $upload[ $field ];
 			}
 			if ( $good && null !== $manifest ) {
 				$source = array(
-					'version'  => 1,
+					'version'  => null !== $html5 ? 2 : 1,
 					'manifest' => $manifest,
 					'upload'   => array_intersect_key( $upload, $columns ),
 				);
-				$json   = wp_json_encode( $source );
+				if ( null !== $html5 ) {
+					$source['html5'] = $html5;
+				}
+				$json = wp_json_encode( $source );
 				if ( false !== $json ) {
 					update_post_meta( $id, Creative_Repository::META_IMAGE_SOURCE, wp_slash( $json ) );
 				}
 				$good = false !== $json && $this->source( $id ) === $source;
 			}
 			if ( ! $good ) {
+				update_post_meta( $id, Creative_Repository::META_KIND, $old_kind );
 				if ( null === $old_source ) {
 					delete_post_meta( $id, Creative_Repository::META_IMAGE_SOURCE );
 				} else {
@@ -180,6 +195,9 @@ final class Image_Resource_Repository {
 				|| ( $row['sha256'] ?? null ) !== $source['manifest']['resources'][ $size ]['sha256'] ) {
 				return null;
 			}
+		}
+		if ( 2 === $source['version'] && ! self::html5_receipt( $source, $value ) ) {
+			return null;
 		}
 		$base = $source['manifest']['base'];
 		return (int) get_post_meta( $id, Creative_Repository::META_ATTACHMENT_ID, true ) === $value['resources'][ $base ]['attachment_id'] ? $value : null;
@@ -262,9 +280,11 @@ final class Image_Resource_Repository {
 		}
 		$source  = self::decode_source( $map[ Creative_Repository::META_IMAGE_SOURCE ] );
 		$receipt = json_decode( $map[ Creative_Repository::META_IMAGE_PUBLICATION ], true, 12 );
-		if ( false === $source || ! is_array( $receipt ) || 'image' !== $map[ Creative_Repository::META_KIND ]
+		if ( false === $source || ! is_array( $receipt ) || ( 2 === $source['version'] ? 'html5' : 'image' ) !== $map[ Creative_Repository::META_KIND ]
 			|| 1 !== ( $receipt['version'] ?? null ) || get_current_blog_id() !== ( $receipt['site_id'] ?? null )
 			|| ( $receipt['source_hash'] ?? null ) !== $source['upload']['sha256'] || Image_Set::fingerprint( $source['manifest'] ) !== ( $receipt['manifest_hash'] ?? null )
+			|| ( 2 === $source['version'] && ! self::html5_receipt( $source, $receipt ) )
+			|| ( isset( $row['image_version'] ) && (int) $row['image_version'] !== $source['version'] )
 			|| ( isset( $row['image_hash'] ) && $row['image_hash'] !== $receipt['manifest_hash'] ) ) {
 			return null;
 		}
@@ -295,12 +315,20 @@ final class Image_Resource_Repository {
 		$url     = trailingslashit( $uploads['baseurl'] ) . $published['file'];
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Preserve the core media URL filter for publisher CDN mappings without per-attachment hot-path queries.
 		$url = apply_filters( 'wp_get_attachment_url', $url, $published['attachment_id'] );
-		return is_string( $url ) && '' !== $url ? array(
+		if ( ! is_string( $url ) || '' === $url ) {
+			return null;
+		}
+		$result = array(
 			'image'  => $url,
 			'width'  => $resource['width'],
 			'height' => $resource['height'],
 			'alt'    => $map[ Creative_Repository::META_ALT_TEXT ],
-		) : null;
+		);
+		if ( 2 === $source['version'] ) {
+			$result['document']     = trailingslashit( $uploads['baseurl'] ) . $receipt['html5']['file'];
+			$result['documentHash'] = $source['html5']['document']['sha256'];
+		}
+		return $result;
 	}
 
 	/**
@@ -326,7 +354,7 @@ final class Image_Resource_Repository {
 			);
 		}
 		return array(
-			'image_version' => 1,
+			'image_version' => $source['version'],
 			'image_sizes'   => implode( ',', array_keys( $source['manifest']['resources'] ) ),
 			'image_hash'    => $this->ready( $id ) ? Image_Set::fingerprint( $source['manifest'] ) : '',
 		);
@@ -342,8 +370,21 @@ final class Image_Resource_Repository {
 	 */
 	private static function digest( int $id, array $receipt, string $url, string $alt ): string {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Review fingerprints must refuse invalid UTF-8 rather than normalize it into different reviewed text.
-		$json = json_encode( array( $id, get_current_blog_id(), $receipt['campaign_id'] ?? 0, $receipt['org_id'] ?? 0, $receipt['placement_id'] ?? 0, $receipt['source_hash'] ?? '', $receipt['manifest_hash'] ?? '', $receipt['resources'] ?? array(), $url, $alt ), JSON_UNESCAPED_SLASHES );
+		$json = json_encode( array( $id, get_current_blog_id(), $receipt['campaign_id'] ?? 0, $receipt['org_id'] ?? 0, $receipt['placement_id'] ?? 0, $receipt['source_hash'] ?? '', $receipt['manifest_hash'] ?? '', $receipt['resources'] ?? array(), $url, $alt, ...( isset( $receipt['html5'] ) ? array( $receipt['html5'] ) : array() ) ), JSON_UNESCAPED_SLASHES );
 		return false === $json ? '' : hash( 'sha256', $json );
+	}
+
+	/**
+	 * The inert publication envelope is bound to the exact reviewed source bytes.
+	 *
+	 * @param array<string,mixed> $source Current source snapshot.
+	 * @param array<string,mixed> $receipt Publication resource facts.
+	 */
+	private static function html5_receipt( array $source, array $receipt ): bool {
+		$row = $receipt['html5'] ?? null;
+		return is_array( $row ) && count( $row ) === 4 && is_int( $row['attachment_id'] ?? null ) && $row['attachment_id'] > 0
+			&& is_string( $row['file'] ?? null ) && 1 === preg_match( '#\A[a-zA-Z0-9_/-]+\.json\z#', $row['file'] ) && ! str_contains( $row['file'], '..' )
+			&& ( $row['sha256'] ?? null ) === $source['upload']['sha256'] && ( $row['manifest_hash'] ?? null ) === Html5_Profile::fingerprint( $source['html5'] );
 	}
 
 	/**

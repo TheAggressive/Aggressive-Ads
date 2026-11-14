@@ -424,6 +424,19 @@ The authorized image file route accepts `size=WIDTHxHEIGHT` for an image set,
 defaulting to its base. It streams only the chosen raster, never the encrypted
 container. The preview document shows all set members for review and retains the
 image-only sandbox/CSP. Missing/foreign sizes return the same unavailable answer.
+Staff may instead submit a static HTML5 ZIP as `file` with a separate raster
+`fallback` on the same routes. Review authority is checked by the shared workflow
+in addition to upload/object capabilities, nonces and the existing limiter.
+`renditions[]` cannot accompany this profile. The compressed ZIP and compiled
+document each meet the placement limit; the fallback must match the base size.
+Scripts, unsafe archives and unsupported local/external resources are refused.
+No request may supply a kind, manifest, checksum, approval or tenant identity.
+The private preview shows compiled content and fallback under empty sandboxes;
+`/file` still returns only an authorized raster. Approved native descriptors use
+`format: "html5-static"`, `formatVersion: 1`, `document` (generated inert public
+JSON URL), `documentHash` (reviewed compiled SHA-256), and the usual raster fields.
+No archive or document body is copied into fill JSON. See [P18 limits/profile](platform-p18-rich-creative-types.md).
+
 Native paid image descriptors include `format: "image"` and `formatVersion: 1`;
 the server chooses the rendition using the placement's existing viewport map.
 The client refuses unsupported descriptors before painting or firing a beacon.

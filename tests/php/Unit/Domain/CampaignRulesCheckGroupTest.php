@@ -42,7 +42,7 @@ final class CampaignRulesCheckGroupTest extends TestCase {
 		$codes = self::codes();
 
 		// A count, so a reflection that silently found nothing cannot pass.
-		$this->assertCount( 22, $codes );
+		$this->assertCount( 23, $codes );
 
 		foreach ( $codes as $name => $code ) {
 			$this->assertContains( Campaign_Rules::check_group( $code ), Campaign_Rules::CHECK_GROUPS, $name );
@@ -66,6 +66,7 @@ final class CampaignRulesCheckGroupTest extends TestCase {
 
 	public function test_artwork_and_its_link_are_one_check(): void {
 		$this->assertSame( 'artwork', Campaign_Rules::check_group( Campaign_Rules::ERROR_NO_CREATIVES ) );
+		$this->assertSame( 'artwork', Campaign_Rules::check_group( Campaign_Rules::ERROR_HTML5 ) );
 		$this->assertSame( 'artwork', Campaign_Rules::check_group( Campaign_Rules::ERROR_CLICK_URL_INVALID ) );
 		$this->assertSame( 'details', Campaign_Rules::check_group( 'a_code_from_the_future' ) );
 	}

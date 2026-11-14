@@ -37,7 +37,7 @@ final class Creative_Change_Manager {
 	 * @param Creative_Repository          $creatives Creative persistence.
 	 * @param Creative_Revision_Repository $revisions  Revision chain persistence.
 	 * @param Placement_Repository         $placements Placement persistence.
-	 * @param Image_Handler                $uploader   Hostile-file validation.
+	 * @param Creative_Ingestion           $uploader   Hostile-file validation.
 	 * @param Private_Storage              $storage    Private file storage.
 	 * @param Rate_Limiter                 $limiter    Upload abuse bounding.
 	 * @param Ad_Provider_Interface        $provider   Public delivery projection.
@@ -48,7 +48,7 @@ final class Creative_Change_Manager {
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Placement_Repository $placements,
-		private readonly Image_Handler $uploader,
+		private readonly Creative_Ingestion $uploader,
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
 		private readonly Ad_Provider_Interface $provider,
@@ -257,8 +257,8 @@ final class Creative_Change_Manager {
 				'placement_id' => $current['placement_id'],
 				'width'        => $accepted['width'],
 				'height'       => $accepted['height'],
-				'mime'         => Image_Handler::summary( $accepted )['mime'],
-				'bytes'        => Image_Handler::summary( $accepted )['bytes'],
+				'mime'         => Creative_Ingestion::summary( $accepted )['mime'],
+				'bytes'        => Creative_Ingestion::summary( $accepted )['bytes'],
 			);
 		} finally {
 			$this->revisions->release_change_lock( $creative_id, $lock );
@@ -511,7 +511,8 @@ final class Creative_Change_Manager {
 		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ), $this->placements->size( $placement_id ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ) );
 
 		if ( is_wp_error( $accepted ) ) {
-			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
+			$data = $accepted->get_error_data();
+			$accepted->add_data( array_merge( array( 'status' => 422 ), is_array( $data ) ? $data : array() ), $accepted->get_error_code() );
 
 			return $accepted;
 		}
@@ -567,6 +568,9 @@ final class Creative_Change_Manager {
 		);
 		if ( isset( $accepted['manifest'] ) && \Aggressive\Ads\Domain\Image_Set::valid( $accepted['manifest'] ) ) {
 			$upload['manifest'] = $accepted['manifest'];
+		}
+		if ( isset( $accepted['html5'] ) ) {
+			$upload['html5'] = $accepted['html5'];
 		}
 		return $upload;
 	}

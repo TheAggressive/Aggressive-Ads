@@ -42,7 +42,7 @@ use Aggressive\Ads\Core\Post_Types;
 final class Creative_Attachment_Repository {
 
 	/**
-	 * Persist a newly published, exact raster without generating altered full-size files.
+	 * Persist an exact raster or inert JSON source without automatic file transformations.
 	 *
 	 * @param int                 $creative_id Owning revision.
 	 * @param string              $target Generated public file path.
@@ -51,11 +51,11 @@ final class Creative_Attachment_Repository {
 	 * @param string              $alt Reviewed alternative text.
 	 * @return int|\WP_Error
 	 */
-	public function create_raster_resource( int $creative_id, string $target, string $relative, array $raster, string $alt ): int|\WP_Error {
+	public function create_resource( int $creative_id, string $target, string $relative, array $raster, string $alt ): int|\WP_Error {
 		$id = wp_insert_attachment(
 			array(
 				'post_mime_type' => $raster['mime'],
-				'post_title'     => $raster['name'],
+				'post_title'     => sanitize_text_field( $raster['name'] ),
 				'post_status'    => 'inherit',
 			),
 			$target,

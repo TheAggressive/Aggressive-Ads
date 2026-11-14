@@ -146,8 +146,8 @@ write disappears with nothing reporting it.
 | `_aggr_target_blank` | int | Legacy metadata. Native paid advertisements open a new tab. |
 | `_aggr_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
 | `_aggr_attachment_id` | int | `0` until approval |
-| `_aggr_image_source` | JSON | Versioned, bounded image-set manifest and authoritative private source facts; absent for legacy images. |
-| `_aggr_image_publication` | JSON | Site/parent/source-bound real resource references and durable staff approval proof for the complete revision. |
+| `_aggr_image_source` | JSON | Versioned, bounded source snapshot: v1 raster manifest/upload, v2 static HTML5 facts and reviewed raster fallback; absent for legacy images. |
+| `_aggr_image_publication` | JSON | Site/parent/source/manifest-bound real resource references and durable staff approval proof for the complete revision; v2 includes the inert HTML5 JSON envelope. |
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
 | `_aggr_review_state` | enum | `pending` \| `approved` \| `rejected` \| `replaced`. A creative decision is separate from its campaign's status. |
 
@@ -158,6 +158,14 @@ the complete source, receipt, parentage and current text must match the durable
 staff approval proof. Neither a queue flag nor an attachment alone makes an
 image set eligible. Placement policy is revalidated before publishing a queued
 set, so a map or file-limit edit cannot approve stale ingestion assumptions.
+
+Static HTML5 (`kind=html5`) is supported only with a validated version-2 source
+snapshot from the staff ingestion workflow. A legacy kind string cannot authorize
+execution. Its compiled document, original archive and fallback are bound to one
+encrypted source and human approval receipt. Published bytes are a raster plus
+an inert base64 JSON envelope; raw HTML is never served from the site origin.
+Text-only classification compares the complete HTML5 facts and source identity,
+and cloned text still requires its own review proof. See the [P18 profile](platform-p18-rich-creative-types.md).
 
 ### Creative Asset and Creative Assignment — custom tables
 

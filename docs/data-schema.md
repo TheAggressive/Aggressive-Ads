@@ -395,7 +395,9 @@ Database version 35 adds `image_version` (unsigned tinyint, default 0),
 `image_sizes` (varchar(191), default empty) and `image_hash` (char(64), default
 empty) to assignments. Version 0 normalizes existing single-image rows through
 their attachment reader; version 1 requires a reviewed image-set manifest and
-receipt. Malformed source records project to an ineligible sentinel rather than
+receipt. Version 2 uses the same columns for a staff-reviewed static HTML5
+package and its raster fallback; it adds no DDL or historical kind conversion.
+Malformed source records project to an ineligible sentinel rather than
 being mistaken for legacy images. Historical ids, weights, windows, statuses
 and counters remain in place.
 

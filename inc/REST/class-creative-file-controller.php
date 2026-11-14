@@ -214,6 +214,15 @@ final class Creative_File_Controller implements Service {
 			if ( null === $set || ( '' !== $size && ! isset( $set['manifest']['resources'][ $size ] ) ) ) {
 				return $this->document_response( 404, self::unavailable_body() );
 			}
+			if ( isset( $set['package'] ) ) {
+				$base     = $set['manifest']['resources'][ $set['manifest']['base'] ];
+				$body     = '<div><figure><figcaption>' . esc_html__( 'Static HTML5 creative', 'aggressive-ads' ) . '</figcaption><iframe sandbox="" title="' . esc_attr__( 'Static HTML5 creative', 'aggressive-ads' ) . '" style="border:0;width:100%;aspect-ratio:' . (int) $base['width'] . '/' . (int) $base['height'] . ';height:auto" srcdoc="' . esc_attr( $set['package']['document'] ) . '"></iframe></figure>';
+				$fallback = 'data:' . $base['mime'] . ';base64,' . base64_encode( $set['package']['image'] );
+				$body    .= '<figure><figcaption>' . esc_html__( 'Raster fallback', 'aggressive-ads' ) . '</figcaption><img src="' . esc_url( $fallback, array( 'data' ) ) . '" alt=""></figure></div>';
+				$response = $this->document_response( 200, $body );
+				$response->header( 'Content-Security-Policy', Preview_Frame::document_policy( self::document_origin() ) . '; frame-src about:' );
+				return $response;
+			}
 			$body = '<div>';
 			foreach ( $set['manifest']['resources'] as $key => $resource ) {
 				if ( '' !== $size && $size !== $key ) {

@@ -67,6 +67,8 @@ or migrate the working site's data merely to run a test.
   the compatible PHPUnit from the requested config.
 - A query result must supply every field a downstream policy reads. Exercise
   real writers and readers together; fixtures must not invent those fields.
+- Creative upload dispatch lives in `Creative_Ingestion`; supported profiles and
+  isolation gates belong in the [P18 contract](docs/platform-p18-rich-creative-types.md).
 - A shared workflow owns its authorization, validation, revision handling and
   limits. REST, portal and admin adapters must call it rather than duplicate it.
 - Finish source edits and asset builds before checks that consume them. Concurrent

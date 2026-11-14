@@ -1,6 +1,6 @@
 <?php
 /**
- * Publish every reviewed raster in a revision before exposing its receipt.
+ * Publish reviewed rasters and any inert static HTML5 envelope before exposing the receipt.
  *
  * @package Aggressive\Ads
  */
@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Domain\Image_Set;
+use Aggressive\Ads\Domain\Html5_Profile;
+use Aggressive\Ads\Domain\Html5_Package;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -54,6 +56,9 @@ final class Image_Publication {
 			if ( ! is_array( $source ) || null === $details ) {
 				return $this->error();
 			}
+			if ( 2 === $source['version'] && ! \Aggressive\Ads\Support\Html5_Runtime::available() ) {
+				return $this->error();
+			}
 			$existing = $this->resources->publication( $id );
 			if ( null !== $existing ) {
 				if ( null === ( new Image_Resources( $this->resources, $this->storage ) )->published( $id ) ) {
@@ -79,12 +84,16 @@ final class Image_Publication {
 				return $this->error();
 			}
 			$upload = $source['upload'];
-			$bytes  = $this->storage->read( $upload['path'], Image_Set::MAX_ENCODED_BYTES );
+			$bytes  = $this->storage->read( $upload['path'], 2 === $source['version'] ? Html5_Profile::MAX_ARTIFACT : Image_Set::MAX_ENCODED_BYTES );
 			if ( null === $bytes || ! hash_equals( $upload['sha256'], hash( 'sha256', $bytes ) ) ) {
 				return $this->error();
 			}
 			$manifest = $source['manifest'];
-			$images   = Image_Set::MIME === $upload['mime'] ? Image_Set::unpack( $bytes, $manifest ) : array( $manifest['base'] => $bytes );
+			$package  = 2 === $source['version'] ? Html5_Package::unpack( $bytes, $source['html5'], $manifest ) : null;
+			if ( 2 === $source['version'] && ( null === $package || ! Html5_Profile::fits( $source['html5'], $placements->max_bytes( $placement_id ) ) ) ) {
+				return $this->error();
+			}
+			$images = null !== $package ? array( $manifest['base'] => $package['image'] ) : ( Image_Set::MIME === $upload['mime'] ? Image_Set::unpack( $bytes, $manifest ) : array( $manifest['base'] => $bytes ) );
 			if ( null === $images ) {
 				return $this->error();
 			}
@@ -113,6 +122,26 @@ final class Image_Publication {
 				'source_hash'   => $upload['sha256'],
 				'resources'     => $published,
 			);
+			if ( null !== $package ) {
+				$published_source = $this->publish_resource(
+					$id,
+					array(
+						'mime'   => 'application/json',
+						'name'   => 'Static HTML5 publication',
+						'width'  => 0,
+						'height' => 0,
+						'sha256' => $upload['sha256'],
+					),
+					$bytes,
+					''
+				);
+				if ( is_wp_error( $published_source ) ) {
+					return $published_source;
+				}
+				$created[]                         = $published_source['attachment_id'];
+				$published_source['manifest_hash'] = Html5_Profile::fingerprint( $source['html5'] );
+				$receipt['html5']                  = $published_source;
+			}
 			$receipt = $this->review( $id, $receipt );
 			if ( null === $receipt ) {
 				return $this->error();
@@ -174,7 +203,7 @@ final class Image_Publication {
 		if ( ! empty( $uploads['error'] ) ) {
 			return $this->error();
 		}
-		$extension = Upload_Rules::extension_for_mime( $raster['mime'] );
+		$extension = 'application/json' === $raster['mime'] ? 'json' : Upload_Rules::extension_for_mime( $raster['mime'] );
 		$name      = wp_generate_uuid4() . '.' . $extension;
 		$relative  = ltrim( $uploads['subdir'] . '/' . $name, '/' );
 		$target    = trailingslashit( $uploads['path'] ) . $name;
@@ -183,7 +212,7 @@ final class Image_Publication {
 			wp_delete_file( $target );
 			return $this->error();
 		}
-		$attachment_id = $this->attachments->create_raster_resource( $id, $target, $relative, $raster, $alt );
+		$attachment_id = $this->attachments->create_resource( $id, $target, $relative, $raster, $alt );
 		if ( is_wp_error( $attachment_id ) ) {
 			wp_delete_file( $target );
 			return $this->error();

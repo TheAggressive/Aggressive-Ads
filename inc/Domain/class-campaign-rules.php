@@ -27,6 +27,7 @@ final class Campaign_Rules {
 	public const ERROR_CREATIVE_PLACEMENT  = 'creative_placement_not_selected';
 	public const ERROR_CREATIVE_SIZE       = 'creative_size_mismatch';
 	public const ERROR_IMAGE_SET           = 'aggr_image_set_invalid';
+	public const ERROR_HTML5               = 'aggr_html5_policy_changed';
 	public const ERROR_CLICK_URL_MISSING   = 'click_url_missing';
 	public const ERROR_CLICK_URL_INVALID   = 'click_url_invalid';
 	public const ERROR_START_MISSING       = 'start_date_missing';
@@ -86,6 +87,7 @@ final class Campaign_Rules {
 			self::ERROR_CREATIVE_PLACEMENT,
 			self::ERROR_CREATIVE_SIZE,
 			self::ERROR_IMAGE_SET,
+			self::ERROR_HTML5,
 			self::ERROR_CLICK_URL_MISSING,
 			self::ERROR_CLICK_URL_INVALID   => 'artwork',
 			default                         => 'details',
@@ -99,6 +101,16 @@ final class Campaign_Rules {
 	 * a reviewer. See docs/threat-model.md.
 	 */
 	public const ADVERTISER_CREATIVE_KIND = 'image';
+
+	/**
+	 * Submission and coverage share one supported-kind policy; authority to ingest remains separate.
+	 *
+	 * @param string   $kind Persisted revision kind.
+	 * @param int|null $source_version Version from an already validated source snapshot.
+	 */
+	public static function supported_creative_kind( string $kind, ?int $source_version ): bool {
+		return self::ADVERTISER_CREATIVE_KIND === $kind || ( 'html5' === $kind && 2 === $source_version );
+	}
 
 	/**
 	 * Schemes a destination URL may use.

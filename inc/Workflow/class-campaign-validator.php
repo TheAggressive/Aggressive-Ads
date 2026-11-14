@@ -204,13 +204,16 @@ final class Campaign_Validator {
 				return __( 'Every placement needs its own creative.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_KIND:
-				return __( 'Only image creatives can be submitted.', 'aggressive-ads' );
+				return __( 'Use image creative or a supported static HTML5 package uploaded by staff.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_PLACEMENT:
 				return __( 'A creative is attached to a placement this campaign has not selected.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_IMAGE_SET:
 				return __( 'Choose a base image and up to five different renditions in the placement’s supported sizes, totaling no more than 2 MB.', 'aggressive-ads' );
+
+			case Campaign_Rules::ERROR_HTML5:
+				return __( 'This HTML5 package no longer fits the placement’s current file limit. Replace it with a smaller package or image creative.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_SIZE:
 				return sprintf(
@@ -455,8 +458,12 @@ final class Campaign_Validator {
 			if ( Coverage_Service::STATE_INVALID_IMAGE_SET === $entry['state'] ) {
 				$result->add( Campaign_Rules::ERROR_IMAGE_SET, $field );
 			}
+			if ( Coverage_Service::STATE_INVALID_HTML5 === $entry['state'] ) {
+				$result->add( Campaign_Rules::ERROR_HTML5, $field );
+			}
 
-			if ( Campaign_Rules::ADVERTISER_CREATIVE_KIND !== $creative['kind'] ) {
+			$source = ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->source( $creative['id'] );
+			if ( ! Campaign_Rules::supported_creative_kind( $creative['kind'], is_array( $source ) ? $source['version'] : null ) ) {
 				$result->add( Campaign_Rules::ERROR_CREATIVE_KIND, $field, array( 'kind' => $creative['kind'] ) );
 			}
 

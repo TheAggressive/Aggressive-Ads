@@ -9,6 +9,7 @@
 
 import { viewportWidth } from './viewport.js';
 import { observeViewability } from './viewability.js';
+import { prepareStaticHtml5 } from './static-html5.js';
 
 /**
  * How long to wait for a creative's pixels before giving up on the swap.
@@ -226,7 +227,8 @@ export const renderPayload = async ( root, payload ) => {
 		creative &&
 		( creative.format !== undefined ||
 			creative.formatVersion !== undefined ) &&
-		( creative.format !== 'image' || creative.formatVersion !== 1 )
+		( ! [ 'image', 'html5-static' ].includes( creative.format ) ||
+			creative.formatVersion !== 1 )
 	) {
 		return NOTHING;
 	}
@@ -245,6 +247,7 @@ export const renderPayload = async ( root, payload ) => {
 	 */
 	const ad = buildAd( creative );
 	const image = ad.querySelector( 'img' );
+	const started = window.performance.now();
 
 	/*
 	 * **Nothing is removed until the replacement can be painted.**
@@ -264,15 +267,38 @@ export const renderPayload = async ( root, payload ) => {
 	if ( image && ! ( await readyToPaint( image, PRELOAD_TIMEOUT_MS ) ) ) {
 		return NOTHING;
 	}
+	if ( ! root.isConnected ) {
+		return NOTHING;
+	}
 
-	canvas.replaceChildren( ad );
+	const rich =
+		creative.format === 'html5-static' &&
+		( await prepareStaticHtml5(
+			creative,
+			ad,
+			canvas,
+			PRELOAD_TIMEOUT_MS - ( window.performance.now() - started )
+		) );
+	if ( ! root.isConnected ) {
+		return NOTHING;
+	}
+	if ( rich ) {
+		image?.remove();
+		ad.setAttribute( 'aria-label', creative.alt ?? '' );
+		for ( const node of Array.from( canvas.childNodes ) ) {
+			if ( node !== ad ) {
+				node.remove();
+			}
+		}
+	} else {
+		canvas.replaceChildren( ad );
+	}
 
 	if ( payload.beacon && creative.token ) {
 		window.navigator.sendBeacon?.(
 			payload.beacon,
 			new URLSearchParams( { token: creative.token } )
 		);
-
 		// Observation starts after the ad is in the document, so the first
 		// measurement describes something a person could actually see.
 		if ( payload.viewability ) {
