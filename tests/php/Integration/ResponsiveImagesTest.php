@@ -306,6 +306,55 @@ final class ResponsiveImagesTest extends WP_UnitTestCase {
 		return $result['id'];
 	}
 
+	/** Corrupt stored values must not normalize to legacy absence or reach string/array operations. */
+	public function test_null_and_noncanonical_metadata_fail_closed(): void {
+		global $wpdb;
+		$id = $this->upload_set();
+		$this->approve_on_running_campaign( $id );
+		$records = new Image_Resource_Repository();
+		$source  = get_post_meta( $id, Creative_Repository::META_IMAGE_SOURCE, true );
+		$row     = ( new \Aggressive\Ads\Repository\Creative_Assignment_Repository() )->for_campaign( $this->campaign_id )[0];
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Deliberately corrupt the actual persisted revision snapshot in the isolated database.
+		$this->assertSame(
+			1,
+			$wpdb->update(
+				$wpdb->postmeta,
+				array( 'meta_value' => null ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Prepared fixture SET value for one indexed revision; this is not an unindexed metadata search.
+				array(
+					'post_id'  => $id,
+					'meta_key' => Creative_Repository::META_IMAGE_SOURCE,
+				)
+			)
+		);
+		$this->assertFalse( $records->source( $id ) );
+		$this->assertSame( 255, $records->projection( $id )['image_version'] );
+		$this->assertNull( $records->delivery( $row, '320x50' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Restore source bytes, then exercise case-insensitive SQL matching with a noncanonical stored metadata key.
+		$this->assertSame(
+			1,
+			$wpdb->update(
+				$wpdb->postmeta,
+				array( 'meta_value' => $source ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Prepared fixture SET value for one indexed revision; this is not an unindexed metadata search.
+				array(
+					'post_id'  => $id,
+					'meta_key' => Creative_Repository::META_IMAGE_SOURCE,
+				)
+			)
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This malformed key must be refused regardless of the database collation's matching behavior.
+		$this->assertSame(
+			1,
+			$wpdb->update(
+				$wpdb->postmeta,
+				array( 'meta_key' => strtoupper( Creative_Repository::META_KIND ) ),
+				array(
+					'post_id'  => $id,
+					'meta_key' => Creative_Repository::META_KIND,
+				)
+			)
+		);
+		$this->assertNull( $records->delivery( $row, '320x50' ) );
+	}
 	/** Another upload finishing during inspection must win over an earlier stale source snapshot. */
 	public function test_overlapping_replacement_refuses_the_stale_writer(): void {
 		$id                  = $this->upload_set();

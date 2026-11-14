@@ -250,10 +250,15 @@ final class Image_Resource_Repository {
 		}
 		$map = array();
 		foreach ( $values as $value ) {
-			if ( isset( $map[ $value['meta_key'] ] ) || strlen( $value['value'] ) > 24576 ) {
+			if ( ! is_array( $value ) || ! is_string( $value['meta_key'] ?? null ) || ! is_string( $value['value'] ?? null ) || isset( $map[ $value['meta_key'] ] ) || strlen( $value['value'] ) > 24576 ) {
 				return null;
 			}
 			$map[ $value['meta_key'] ] = $value['value'];
+		}
+		foreach ( $keys as $key ) {
+			if ( ! array_key_exists( $key, $map ) ) {
+				return null;
+			}
 		}
 		$source  = self::decode_source( $map[ Creative_Repository::META_IMAGE_SOURCE ] );
 		$receipt = json_decode( $map[ Creative_Repository::META_IMAGE_PUBLICATION ], true, 12 );
@@ -430,7 +435,7 @@ final class Image_Resource_Repository {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Current revision state, capped before transfer; duplicate metadata fails closed.
 		$rows = $wpdb->get_col( $wpdb->prepare( 'SELECT LEFT(meta_value,24577) FROM %i WHERE post_id=%d AND meta_key=%s ORDER BY meta_id LIMIT 2', $wpdb->postmeta, $id, $key ) );
-		if ( '' !== $wpdb->last_error || ! is_array( $rows ) || count( $rows ) > 1 || ( isset( $rows[0] ) && strlen( $rows[0] ) > 24576 ) ) {
+		if ( '' !== $wpdb->last_error || ! is_array( $rows ) || count( $rows ) > 1 || ( array() !== $rows && ( ! is_string( $rows[0] ?? null ) || strlen( $rows[0] ) > 24576 ) ) ) {
 			return false;
 		}
 		return $rows[0] ?? null;

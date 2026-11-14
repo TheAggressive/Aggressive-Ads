@@ -70,6 +70,9 @@ completed source survives. Removing the expected-source hash check makes that
 regression fail as well.
 Both real private-image REST routes also reject nested/malformed rendition
 query values; removing the declared size validation makes that regression fail.
+Persisted SQL NULL snapshots are malformed rather than legacy absence, and
+noncanonical metadata keys are refused before delivery. Removing the NULL-source
+guard makes the real database regression fail.
 The browser cases exercise explicit and scriptless ingestion, invalid nonce
 refusal, 320px reflow/axe, the unchanged empty sandbox, both served image sizes
 and one impression request per rendered page. Full CI remains required for the
