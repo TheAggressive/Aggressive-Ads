@@ -293,6 +293,41 @@ final class ResponsiveImagesTest extends WP_UnitTestCase {
 		return $result['id'];
 	}
 
+	/** Another upload finishing during inspection must win over an earlier stale source snapshot. */
+	public function test_overlapping_replacement_refuses_the_stale_writer(): void {
+		$id                  = $this->upload_set();
+		$outer               = $this->image_file( 728, 90, 7 );
+		$outer['name']       = 'overlapping-base.png';
+		$outer['renditions'] = array( $this->image_file( 320, 50, 8 ) );
+		$other               = $this->image_file( 728, 90, 3 );
+		$other['renditions'] = array( $this->image_file( 320, 50, 4 ) );
+		$changed             = false;
+		$winner              = null;
+		$records             = new Image_Resource_Repository();
+		$storage             = Plugin::instance()->container()->get( Private_Storage::class );
+		$interleave          = function ( array $checked, string $path, string $filename ) use ( $id, $other, &$changed, &$winner, $records ): array {
+			if ( 'overlapping-base.png' === $filename && ! $changed ) {
+				$changed = true;
+				$this->assertIsArray( $this->manager->replace_artwork( $id, $other ) );
+				$winner = $records->source( $id );
+			}
+			return $checked;
+		};
+		add_filter( 'wp_check_filetype_and_ext', $interleave, 10, 3 );
+		try {
+			$this->assertWPError( $this->manager->replace_artwork( $id, $outer ) );
+			$this->assertTrue( $changed );
+			$this->assertIsArray( $winner );
+			$this->assertSame( $winner, $records->source( $id ) );
+			$this->assertNotNull( $storage->resolve( $winner['upload']['path'] ) );
+		} finally {
+			remove_filter( 'wp_check_filetype_and_ext', $interleave );
+			if ( is_array( $winner ) ) {
+				$storage->delete( $winner['upload']['path'] );
+			}
+		}
+	}
+
 	/** An image set cannot broaden ownership or turn upload authority into publication authority. */
 	public function test_image_sets_preserve_tenant_and_publication_capability_guards(): void {
 		$file               = $this->image_file( 728, 90, 1 );

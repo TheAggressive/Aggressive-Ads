@@ -64,6 +64,10 @@ fixture bounds, not a hosting-capacity certification.
 Removing token review binding, source serialization or member checksum guards
 made their regression tests fail. Removing renderer dispatch made all four
 unsupported-descriptor tests fail. Each guard was restored before verification.
+An additional real-workflow interleaving test completes a second replacement
+during the first upload's inspection; the stale writer is refused and the
+completed source survives. Removing the expected-source hash check makes that
+regression fail as well.
 The browser cases exercise explicit and scriptless ingestion, invalid nonce
 refusal, 320px reflow/axe, the unchanged empty sandbox, both served image sizes
 and one impression request per rendered page. Full CI remains required for the
