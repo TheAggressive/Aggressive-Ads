@@ -209,6 +209,9 @@ final class Campaign_Validator {
 			case Campaign_Rules::ERROR_CREATIVE_PLACEMENT:
 				return __( 'A creative is attached to a placement this campaign has not selected.', 'aggressive-ads' );
 
+			case Campaign_Rules::ERROR_IMAGE_SET:
+				return __( 'Choose a base image and up to five different renditions in the placement’s supported sizes, totaling no more than 2 MB.', 'aggressive-ads' );
+
 			case Campaign_Rules::ERROR_CREATIVE_SIZE:
 				return sprintf(
 					/* translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300. */
@@ -449,6 +452,9 @@ final class Campaign_Validator {
 		foreach ( $present as $entry ) {
 			$creative = $entry['creative'];
 			$field    = 'creative:' . $creative['id'];
+			if ( Coverage_Service::STATE_INVALID_IMAGE_SET === $entry['state'] ) {
+				$result->add( Campaign_Rules::ERROR_IMAGE_SET, $field );
+			}
 
 			if ( Campaign_Rules::ADVERTISER_CREATIVE_KIND !== $creative['kind'] ) {
 				$result->add( Campaign_Rules::ERROR_CREATIVE_KIND, $field, array( 'kind' => $creative['kind'] ) );

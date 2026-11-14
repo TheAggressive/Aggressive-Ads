@@ -455,6 +455,28 @@ it would be an unbounded write an attacker chooses.
 
 ## Rollback
 
+Responsive image sets require database version 35 and their complete reviewed
+publication receipt. Site Health reports image-schema/projection progress; a
+completed migration is not a file-integrity audit. Check the per-site
+`aggr_image_projection_error` and cursor when work stalls. A failed row/read
+does not advance progress. After correcting the cause, initialization repairs
+the missing `aggr_migrate_image_projection` event; run that due event through the
+site's normal WordPress cron runner. Do not mark the migration complete manually.
+
+On image publication failure, retry the existing review action. The private
+source remains available and files created by the failed attempt are compensated.
+Do not manufacture an attachment id, receipt or approval hash to restore service.
+For an integrity mismatch or missing encryption key, preserve the failed source
+for investigation and restore the correct key/backup or submit replacement
+artwork for review. The last approved revision is not replaced by ingestion
+failure. Text changes require their own new review proof.
+
+Before rolling back to code without image-set support, pause affected campaigns
+and invalidate their fill caches. Preserve source/receipt metadata, attachments,
+history and counters. A retained base attachment gives older code its legacy
+image view, but it does not provide responsive rendition selection. Do not lower
+the schema marker or delete the new metadata as a rollback mechanism.
+
 **Deactivate first, and only deactivate.**
 
 ```bash

@@ -216,6 +216,27 @@ final class Creative_Revision_Repository {
 	 * @return int New creative id, or 0 on failure.
 	 */
 	private function stage_text_revision( int $creative_id, string $click_url, string $alt_text ): int {
+		$records = new Image_Resource_Repository();
+		$lock    = $records->claim( $creative_id );
+		if ( '' === $lock ) {
+			return 0;
+		}
+		try {
+			wp_cache_delete( $creative_id, 'post_meta' );
+			return $this->copy_text_revision( $creative_id, $click_url, $alt_text );
+		} finally {
+			$records->release( $lock );
+		}
+	}
+
+	/**
+	 * Copy the immutable source and publication while its source lock is held.
+	 *
+	 * @param int    $creative_id Source revision.
+	 * @param string $click_url New destination.
+	 * @param string $alt_text New description.
+	 */
+	private function copy_text_revision( int $creative_id, string $click_url, string $alt_text ): int {
 		$source = get_post( $creative_id );
 
 		if ( ! $source instanceof \WP_Post ) {
@@ -250,6 +271,8 @@ final class Creative_Revision_Repository {
 			Creative_Repository::META_HEIGHT,
 			Creative_Repository::META_ATTACHMENT_ID,
 			Creative_Repository::META_SHA256,
+			Creative_Repository::META_IMAGE_SOURCE,
+			Creative_Repository::META_IMAGE_PUBLICATION,
 			Creative_Repository::META_MIME,
 			Creative_Repository::META_FILESIZE,
 			Creative_Repository::META_ORIGINAL_NAME,
@@ -257,7 +280,7 @@ final class Creative_Revision_Repository {
 			$value = get_post_meta( $creative_id, $key, true );
 
 			if ( '' !== $value && null !== $value ) {
-				update_post_meta( $revision_id, $key, $value );
+				update_post_meta( $revision_id, $key, wp_slash( $value ) );
 			}
 		}
 
@@ -292,7 +315,11 @@ final class Creative_Revision_Repository {
 		$mine   = (string) get_post_meta( $revision_id, Creative_Repository::META_SHA256, true );
 		$theirs = (string) get_post_meta( $previous, Creative_Repository::META_SHA256, true );
 
-		return '' !== $mine && $mine === $theirs;
+		$records         = new Image_Resource_Repository();
+		$source          = $records->source( $revision_id );
+		$previous_source = $records->source( $previous );
+		return '' !== $mine && $mine === $theirs && false !== $source && false !== $previous_source
+			&& ( ( null === $source && null === $previous_source ) || ( is_array( $source ) && is_array( $previous_source ) && $source['manifest'] === $previous_source['manifest'] && $source['upload']['sha256'] === $previous_source['upload']['sha256'] ) );
 	}
 
 	/**

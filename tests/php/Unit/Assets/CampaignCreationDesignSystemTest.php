@@ -243,7 +243,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	}
 
 	/**
-	 * The upload button never paints, and a scriptless browser still gets one.
+	 * Automatic upload buttons do not flash; responsive and scriptless forms retain explicit submission.
 	 *
 	 * It shipped visible and `init` hid it, so every load flashed a button and
 	 * then withdrew it, directly under a sentence saying there is no upload
@@ -266,8 +266,8 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 
 		$this->assertSame(
 			1,
-			substr_count( $form, 'type="submit" hidden>' ),
-			'The upload button has to be hidden in the markup. Hiding it from script paints it first.'
+			substr_count( $form, "type=\"submit\" <?php echo \$aggr_responsive ? '' : 'hidden'; ?>>" ),
+			'Automatic forms must start hidden; responsive forms need an explicit button before optional files are selected.'
 		);
 
 		/*

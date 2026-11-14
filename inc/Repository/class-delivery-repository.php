@@ -48,7 +48,8 @@ final class Delivery_Repository {
 					COALESCE(destination.meta_value, '') AS click_url,
 					COALESCE(alt_text.meta_value, '') AS alt_text,
 					CAST(COALESCE(width_meta.meta_value, '0') AS UNSIGNED) AS width,
-					CAST(COALESCE(height_meta.meta_value, '0') AS UNSIGNED) AS height
+					CAST(COALESCE(height_meta.meta_value, '0') AS UNSIGNED) AS height,
+					EXISTS(SELECT 1 FROM {$meta} image_source WHERE image_source.post_id=creative.ID AND image_source.meta_key=%s) AS responsive
 				FROM {$posts} creative
 				INNER JOIN {$meta} creative_campaign
 					ON creative_campaign.post_id = creative.ID
@@ -90,6 +91,7 @@ final class Delivery_Repository {
 					AND replaces.meta_id IS NULL
 					AND replaced.meta_id IS NULL
 				LIMIT 1",
+				Creative_Repository::META_IMAGE_SOURCE,
 				Creative_Repository::META_CAMPAIGN_ID,
 				Post_Types::CAMPAIGN,
 				Post_Statuses::LIVE,
@@ -114,6 +116,9 @@ final class Delivery_Repository {
 		// phpcs:enable
 
 		if ( ! is_array( $row ) ) {
+			return null;
+		}
+		if ( 1 === (int) $row['responsive'] && null === ( new Image_Resource_Repository() )->delivery( $row, '' ) ) {
 			return null;
 		}
 

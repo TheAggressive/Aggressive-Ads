@@ -172,7 +172,7 @@ final class Creative_View_Data {
 				// the reason; the shared meta key carries two of them.
 				'notes'         => $this->approvals->rejection_notes( $creative['id'] ),
 				'name'          => null === $stored ? '' : $stored['name'],
-				'bytes'         => null === $stored ? 0 : $stored['bytes'],
+				'bytes'         => null === $stored ? 0 : \Aggressive\Ads\Workflow\Image_Handler::summary( $stored )['bytes'],
 				'preview'       => $this->creative_preview( $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( $creative['id'] ),
 
@@ -420,9 +420,9 @@ final class Creative_View_Data {
 			$max_bytes = $this->placements->max_bytes( $placement_id );
 
 			$slots[] = array(
-				'id'        => $placement_id,
-				'name'      => $this->placements->name( $placement_id ),
-				'size'      => $this->placements->size( $placement_id ),
+				'id'         => $placement_id,
+				'name'       => $this->placements->name( $placement_id ),
+				'size'       => $this->placements->size( $placement_id ),
 
 				/*
 				 * Both forms of the same limit. The number is what the browser
@@ -430,10 +430,11 @@ final class Creative_View_Data {
 				 * tells someone to prepare. Formatting it once here is what
 				 * keeps the sentence and the check describing one rule.
 				 */
-				'max_bytes' => $max_bytes,
-				'max_size'  => (string) size_format( $max_bytes ),
-				'active'    => $this->placements->is_active( $placement_id ),
-				'creatives' => $matching,
+				'max_bytes'  => $max_bytes,
+				'max_size'   => (string) size_format( $max_bytes ),
+				'responsive' => count( array_unique( array_merge( array( $this->placements->size( $placement_id ) ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ) ) ) ) > 1,
+				'active'     => $this->placements->is_active( $placement_id ),
+				'creatives'  => $matching,
 			);
 		}
 

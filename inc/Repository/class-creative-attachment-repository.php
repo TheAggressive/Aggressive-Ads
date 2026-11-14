@@ -42,6 +42,60 @@ use Aggressive\Ads\Core\Post_Types;
 final class Creative_Attachment_Repository {
 
 	/**
+	 * Persist a newly published, exact raster without generating altered full-size files.
+	 *
+	 * @param int                 $creative_id Owning revision.
+	 * @param string              $target Generated public file path.
+	 * @param string              $relative File relative to this site's upload root.
+	 * @param array<string,mixed> $raster Inspected resource facts.
+	 * @param string              $alt Reviewed alternative text.
+	 * @return int|\WP_Error
+	 */
+	public function create_raster_resource( int $creative_id, string $target, string $relative, array $raster, string $alt ): int|\WP_Error {
+		$id = wp_insert_attachment(
+			array(
+				'post_mime_type' => $raster['mime'],
+				'post_title'     => $raster['name'],
+				'post_status'    => 'inherit',
+			),
+			$target,
+			0,
+			true
+		);
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		if ( $id <= 0 ) {
+			return new \WP_Error( 'aggr_image_publication_failed', __( 'The image set could not be published. Please try again.', 'aggressive-ads' ) );
+		}
+		$this->mark_attachment_as_creative( $id, $creative_id );
+		$this->set_attachment_alt_text( $id, $alt );
+		$metadata = array(
+			'width'  => $raster['width'],
+			'height' => $raster['height'],
+			'file'   => $relative,
+			'sizes'  => array(),
+		);
+		wp_update_attachment_metadata( $id, $metadata );
+		if ( wp_get_attachment_metadata( $id ) !== $metadata || get_attached_file( $id ) !== $target || (int) get_post_meta( $id, Creative_Repository::META_IS_CREATIVE, true ) !== $creative_id ) {
+			wp_delete_attachment( $id, true );
+			return new \WP_Error( 'aggr_image_publication_failed', __( 'The image set could not be published. Please try again.', 'aggressive-ads' ) );
+		}
+		return $id;
+	}
+
+	/**
+	 * Compensate only attachments freshly created by an uncommitted publication attempt.
+	 *
+	 * @param array<int,int> $ids Fresh ids, never shared historical attachments.
+	 */
+	public function discard_resources( array $ids ): void {
+		foreach ( $ids as $id ) {
+			wp_delete_attachment( $id, true );
+		}
+	}
+
+	/**
 	 * Whether a creative already points at a real attachment.
 	 *
 	 * Checks the post actually exists rather than trusting the recorded id: an

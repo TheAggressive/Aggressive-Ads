@@ -87,7 +87,7 @@ final class Creative_Actions implements Service {
 		check_admin_referer( self::replace_nonce_action( $creative_id ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Hostile bytes are inspected by Creative_Uploader; sanitizing the temporary path corrupts it.
-		$file      = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
+		$file      = \Aggressive\Ads\Support\Upload_Files::read( $_FILES );
 		$click_url = isset( $_POST['click_url'] ) ? sanitize_text_field( wp_unslash( $_POST['click_url'] ) ) : '';
 		$alt_text  = isset( $_POST['alt_text'] ) ? sanitize_text_field( wp_unslash( $_POST['alt_text'] ) ) : '';
 		$result    = $this->process_replace( $creative_id, $file, $click_url, $alt_text );
@@ -138,6 +138,9 @@ final class Creative_Actions implements Service {
 			return false;
 		}
 
+		if ( array_key_exists( 'renditions', $file ) && array() !== $file['renditions'] ) {
+			return true;
+		}
 		$error = isset( $file['error'] ) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
 		$tmp   = isset( $file['tmp_name'] ) && is_string( $file['tmp_name'] ) ? $file['tmp_name'] : '';
 
@@ -180,7 +183,7 @@ final class Creative_Actions implements Service {
 		check_admin_referer( self::upload_nonce_action( $campaign_id, $placement_id ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The shared uploader validates the temporary file and ignores the claimed MIME; sanitizing a filesystem path would corrupt it before validation.
-		$file      = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
+		$file      = \Aggressive\Ads\Support\Upload_Files::read( $_FILES );
 		$click_url = isset( $_POST['click_url'] ) ? sanitize_text_field( wp_unslash( $_POST['click_url'] ) ) : '';
 		$alt_text  = isset( $_POST['alt_text'] ) ? sanitize_text_field( wp_unslash( $_POST['alt_text'] ) ) : '';
 		$result    = $this->process_upload( $campaign_id, $placement_id, $file, $click_url, $alt_text );
@@ -396,7 +399,7 @@ final class Creative_Actions implements Service {
 		check_admin_referer( self::artwork_nonce_action( $creative_id ) );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Raw $_FILES entry; Creative_Uploader validates the bytes, and sanitising the array here would corrupt tmp_name.
-		$file = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
+		$file = \Aggressive\Ads\Support\Upload_Files::read( $_FILES );
 
 		$result = $this->process_artwork( $creative_id, $file );
 

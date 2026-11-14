@@ -37,6 +37,9 @@ final class Coverage_Service {
 	/** The revision's dimensions do not fit the placement. */
 	public const STATE_WRONG_SIZE = 'wrong_size';
 
+	/** The set no longer fits this placement's current rendition or byte policy. */
+	public const STATE_INVALID_IMAGE_SET = 'invalid_image_set';
+
 	/** The revision is not an advertiser image creative. */
 	public const STATE_WRONG_KIND = 'wrong_kind';
 
@@ -234,6 +237,11 @@ final class Coverage_Service {
 
 		if ( Campaign_Rules::ADVERTISER_CREATIVE_KIND !== (string) ( $details['kind'] ?? '' ) ) {
 			return self::STATE_WRONG_KIND;
+		}
+		$source       = ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->source( $revision_id );
+		$placement_id = (int) ( $row['placement_id'] ?? 0 );
+		if ( is_array( $source ) && ! \Aggressive\Ads\Domain\Image_Set::fits( $source['manifest'], $this->placements->size( $placement_id ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ), $this->placements->max_bytes( $placement_id ) ) ) {
+			return self::STATE_INVALID_IMAGE_SET;
 		}
 
 		$placement_id = (int) ( $row['placement_id'] ?? 0 );

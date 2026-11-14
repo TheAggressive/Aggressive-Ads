@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 34;
+	public const DB_VERSION = 35;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -280,6 +280,9 @@ final class Schema {
 	width smallint(5) unsigned NOT NULL DEFAULT 0,
 	height smallint(5) unsigned NOT NULL DEFAULT 0,
 	attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	image_version tinyint(3) unsigned NOT NULL DEFAULT 0,
+	image_sizes varchar(191) NOT NULL DEFAULT '',
+	image_hash char(64) NOT NULL DEFAULT '',
 	revision bigint(20) unsigned NOT NULL DEFAULT 1,
 	operator_paused tinyint(1) unsigned NOT NULL DEFAULT 0,
 	compat_key tinyint(1) unsigned NULL DEFAULT NULL,
@@ -318,6 +321,9 @@ final class Schema {
 			'width',
 			'height',
 			'attachment_id',
+			'image_version',
+			'image_sizes',
+			'image_hash',
 			'revision',
 			'operator_paused',
 			'compat_key',

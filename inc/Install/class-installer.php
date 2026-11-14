@@ -77,6 +77,9 @@ final class Installer {
 			Line_Item_Migrator::OPTION_NAME_DONE,
 			Creative_Assignment_Migrator::OPTION_CURSOR,
 			Creative_Assignment_Migrator::OPTION_DONE,
+			\Aggressive\Ads\Repository\Image_Projection_Repository::CURSOR,
+			\Aggressive\Ads\Repository\Image_Projection_Repository::DONE,
+			\Aggressive\Ads\Repository\Image_Projection_Repository::ERROR,
 			Line_Item_Migrator::OPTION_DONE,
 			Org_Access_Repository::LOOKUP_SALT_OPTION,
 			// Removed last, and only on a data-deleting uninstall: the private
@@ -231,7 +234,7 @@ final class Installer {
 	public function install_creative_model(): void {
 		( new Creative_Asset_Repository() )->install_table();
 		( new Creative_Decision_Repository() )->install_table();
-		( new Creative_Assignment_Repository() )->install_table();
+		( new \Aggressive\Ads\Repository\Image_Projection_Repository() )->install();
 	}
 
 	/** Repository supplied by the container, with a standalone-test fallback. */

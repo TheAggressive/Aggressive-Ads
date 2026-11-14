@@ -57,8 +57,33 @@ final class Assignment_Health implements Service {
 			'label' => __( 'Every creative has a delivery assignment', 'aggressive-ads' ),
 			'test'  => array( $this, 'run_test' ),
 		);
+		$tests['direct']['aggr_image_projection']     = array(
+			'label' => __( 'Image eligibility upgrade', 'aggressive-ads' ),
+			'test'  => array( $this, 'image_projection' ),
+		);
 
 		return $tests;
+	}
+
+	/**
+	 * Report schema and migration progress without claiming to audit every stored resource.
+	 *
+	 * @return array<string,mixed> Site Health direct-test result.
+	 */
+	public function image_projection(): array {
+		$rows           = new \Aggressive\Ads\Repository\Image_Projection_Repository();
+		$state          = $rows->state();
+		$ready          = $rows->available();
+		$complete       = $ready && $state['done'] && '' === $state['error'];
+		$result         = $this->result(
+			$complete ? 'good' : 'recommended',
+			$complete ? __( 'Image eligibility upgrade is complete', 'aggressive-ads' ) : __( 'Image eligibility upgrade needs attention', 'aggressive-ads' ),
+			$complete
+				? __( 'The image eligibility schema and bounded projection upgrade are complete. This check does not verify every media file.', 'aggressive-ads' )
+				: __( 'Complete the database upgrade and check scheduled image projection work. Existing single-image ads retain their compatibility path; responsive uploads require the new schema. See the plugin runbook for recovery.', 'aggressive-ads' )
+		);
+		$result['test'] = 'aggr_image_projection';
+		return $result;
 	}
 
 	/**

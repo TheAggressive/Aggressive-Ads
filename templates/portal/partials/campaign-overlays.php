@@ -331,6 +331,11 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								 */
 								?>
 								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>">
+								<?php
+								$aggr_rendition_placement = (int) ( $aggr_creative['placement_id'] ?? 0 );
+								$aggr_rendition_key       = 'replacement-' . $aggr_creative['id'];
+								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+								?>
 								<p class="aggr-hint">
 									<?php
 									printf(

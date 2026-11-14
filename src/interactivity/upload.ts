@@ -115,6 +115,10 @@ function maybeSubmit( id: string ): void {
 	const file = inputFor( id );
 	const url = urlInputFor( id );
 
+	if ( form?.dataset.aggrResponsive === 'true' ) {
+		return;
+	}
+
 	if ( ! form || ! file || ! url || ! file.files?.length ) {
 		return;
 	}

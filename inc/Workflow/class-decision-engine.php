@@ -314,24 +314,37 @@ final class Decision_Engine {
 	 *
 	 * @param array<string, mixed> $row          Winning assignment row.
 	 * @param int                  $placement_id Placement post id.
+	 * @param string               $size Resolved placement size.
 	 * @return array<string, mixed>|null
 	 */
-	public function payload_from_row( array $row, int $placement_id ): ?array {
+	public function payload_from_row( array $row, int $placement_id, string $size = '' ): ?array {
+		$resource = null;
+		if ( 0 !== (int) ( $row['image_version'] ?? 0 ) ) {
+			if ( 1 !== (int) $row['image_version'] ) {
+				return null;
+			}
+			$resource = ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->delivery( $row, $size );
+			if ( null === $resource ) {
+				return null;
+			}
+		}
 		$attachment_id = (int) ( $row['attachment_id'] ?? 0 );
-		$image         = wp_get_attachment_image_url( $attachment_id, 'full' );
+		$image         = null === $resource ? wp_get_attachment_image_url( $attachment_id, 'full' ) : $resource['image'];
 
 		if ( ! is_string( $image ) || '' === $image ) {
 			return null;
 		}
 
 		return array(
-			'image'     => $image,
-			'alt'       => (string) ( $row['alt_text'] ?? '' ),
-			'width'     => (int) ( $row['width'] ?? 0 ),
-			'height'    => (int) ( $row['height'] ?? 0 ),
-			'placement' => $placement_id,
-			'campaign'  => (int) ( $row['campaign_id'] ?? 0 ),
-			'creative'  => (int) ( $row['revision_id'] ?? 0 ),
+			'format'        => 'image',
+			'formatVersion' => 1,
+			'image'         => $image,
+			'alt'           => null === $resource ? (string) ( $row['alt_text'] ?? '' ) : $resource['alt'],
+			'width'         => null === $resource ? (int) ( $row['width'] ?? 0 ) : $resource['width'],
+			'height'        => null === $resource ? (int) ( $row['height'] ?? 0 ) : $resource['height'],
+			'placement'     => $placement_id,
+			'campaign'      => (int) ( $row['campaign_id'] ?? 0 ),
+			'creative'      => (int) ( $row['revision_id'] ?? 0 ),
 
 			/*
 			 * **A paid creative never keeps the reader on the page.** The
@@ -341,7 +354,7 @@ final class Decision_Engine {
 			 * kinds of advertisement — an absent key and a false one look the
 			 * same to `fill.js`, and only one of them is a decision.
 			 */
-			'sameTab'   => false,
+			'sameTab'       => false,
 		);
 	}
 }

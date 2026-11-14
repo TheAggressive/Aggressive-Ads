@@ -184,6 +184,7 @@ final class Uninstaller {
 		Forecast_Scheduler::unschedule();
 		Line_Item_Migrator::unschedule();
 		Creative_Assignment_Migrator::unschedule();
+		Image_Projection_Migrator::unschedule();
 
 		/*
 		 * Legacy, and named as literals on purpose: the service that owned these

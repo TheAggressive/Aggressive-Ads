@@ -42,7 +42,7 @@ final class CampaignRulesCheckGroupTest extends TestCase {
 		$codes = self::codes();
 
 		// A count, so a reflection that silently found nothing cannot pass.
-		$this->assertCount( 21, $codes );
+		$this->assertCount( 22, $codes );
 
 		foreach ( $codes as $name => $code ) {
 			$this->assertContains( Campaign_Rules::check_group( $code ), Campaign_Rules::CHECK_GROUPS, $name );

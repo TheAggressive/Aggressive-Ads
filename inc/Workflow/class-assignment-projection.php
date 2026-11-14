@@ -136,6 +136,10 @@ final class Assignment_Projection implements Service {
 				$fields['attachment_id'] = $attachment_id;
 			}
 
+			if ( ( new \Aggressive\Ads\Repository\Image_Projection_Repository() )->available() ) {
+				$fields = array_merge( $fields, ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->projection( (int) $row['revision_id'] ) );
+			}
+
 			if ( $this->assignments->project( (int) ( $row['id'] ?? 0 ), $fields ) ) {
 				++$moved;
 			}

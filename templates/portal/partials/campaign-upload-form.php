@@ -32,6 +32,7 @@ use Aggressive\Ads\Portal\Creative_Feedback;
 
 $aggr_slot_key          = (string) $aggr_slot['id'];
 $aggr_default_click_url = (string) ( $aggr_campaign['default_click_url'] ?? '' );
+$aggr_responsive        = true === ( $aggr_slot['responsive'] ?? false );
 $aggr_click_error       = ( 'aggr-click-' . $aggr_slot_key ) === $aggr_creative_error_for;
 
 /*
@@ -49,6 +50,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 	data-wp-interactive="<?php echo esc_attr( Assets::UPLOAD_STORE ); ?>"
 	<?php echo wp_interactivity_data_wp_context( array( 'uploadId' => (string) $aggr_slot['id'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context(). ?>
+	<?php echo $aggr_responsive ? 'data-aggr-responsive="true"' : ''; ?>
 	data-aggr-upload="<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"
 	data-wp-init="actions.init"
 >
@@ -74,9 +76,11 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	<p id="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
 		<?php
 		echo esc_html(
-			'' === $aggr_default_click_url
+			$aggr_responsive
+				? __( 'Choose the base image and any optional renditions, then select Upload creative.', 'aggressive-ads' )
+				: ( '' === $aggr_default_click_url
 				? __( 'Uploads by itself: choose a file, enter its link, and the upload starts when you leave the link field.', 'aggressive-ads' )
-				: __( 'Uploads as soon as you choose a file, linking to the address below unless you change it first.', 'aggressive-ads' )
+				: __( 'Uploads as soon as you choose a file, linking to the address below unless you change it first.', 'aggressive-ads' ) )
 		);
 		?>
 	</p>
@@ -174,5 +178,10 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 		</details>
 	<?php endif; ?>
 
-	<button class="aggr-button" type="submit" hidden><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
+	<?php
+	$aggr_rendition_placement = (int) $aggr_slot['id'];
+	$aggr_rendition_key       = 'upload-' . $aggr_slot_key;
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-renditions.php';
+	?>
+	<button class="aggr-button" type="submit" <?php echo $aggr_responsive ? '' : 'hidden'; ?>><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
 </form>

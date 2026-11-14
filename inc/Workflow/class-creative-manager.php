@@ -59,7 +59,7 @@ final class Creative_Manager {
 	 * @param Creative_Repository            $creatives  Creative persistence.
 	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
 	 * @param Placement_Repository           $placements Placement persistence.
-	 * @param Creative_Uploader              $uploader   Hostile-file validation.
+	 * @param Image_Handler                  $uploader   Hostile-file validation.
 	 * @param Private_Storage                $storage    Private file storage.
 	 * @param Rate_Limiter                   $limiter    Upload abuse bounding.
 	 * @param Audit_Repository               $audit      Audit persistence.
@@ -73,7 +73,7 @@ final class Creative_Manager {
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Placement_Repository $placements,
-		private readonly Creative_Uploader $uploader,
+		private readonly Image_Handler $uploader,
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
@@ -159,10 +159,11 @@ final class Creative_Manager {
 			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
-		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ), $this->placements->size( $placement_id ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ) );
 
 		if ( is_wp_error( $accepted ) ) {
-			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
+			$data = $accepted->get_error_data();
+			$accepted->add_data( array_merge( array( 'status' => 422 ), is_array( $data ) ? $data : array() ), $accepted->get_error_code() );
 
 			return $accepted;
 		}
@@ -234,15 +235,16 @@ final class Creative_Manager {
 			return $this->error( 'aggr_creative_not_created', __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
-		$this->creatives->record_upload( $creative_id, $accepted );
+		$saved = $this->creatives->record_upload( $creative_id, $accepted );
 
 		$recorded = $this->creatives->storage_details( $creative_id );
 		$details  = $this->creatives->details( $creative_id );
 
 		if (
-			null === $recorded
+			! $saved
+			|| null === $recorded
 			|| null === $details
-			|| $accepted['path'] !== $recorded['path']
+			|| $accepted['sha256'] !== $recorded['sha256']
 			|| $campaign_id !== $details['campaign_id']
 			|| $placement_id !== $details['placement_id']
 		) {
@@ -290,8 +292,8 @@ final class Creative_Manager {
 					'placement_id' => $placement_id,
 					'width'        => $accepted['width'],
 					'height'       => $accepted['height'],
-					'bytes'        => $accepted['bytes'],
-					'mime'         => $accepted['mime'],
+					'bytes'        => Image_Handler::summary( $accepted )['bytes'],
+					'mime'         => Image_Handler::summary( $accepted )['mime'],
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -312,8 +314,8 @@ final class Creative_Manager {
 			'placement_id' => $placement_id,
 			'width'        => $accepted['width'],
 			'height'       => $accepted['height'],
-			'mime'         => $accepted['mime'],
-			'bytes'        => $accepted['bytes'],
+			'mime'         => Image_Handler::summary( $accepted )['mime'],
+			'bytes'        => Image_Handler::summary( $accepted )['bytes'],
 			'name'         => $accepted['name'],
 		);
 	}
@@ -445,10 +447,13 @@ final class Creative_Manager {
 			return $allowed;
 		}
 
-		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
+		$previous = $this->creatives->storage_details( $creative_id );
+
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ), $this->placements->size( $placement_id ), array_values( $this->placements->size_map( $placement_id )->breakpoints() ) );
 
 		if ( is_wp_error( $accepted ) ) {
-			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
+			$data = $accepted->get_error_data();
+			$accepted->add_data( array_merge( array( 'status' => 422 ), is_array( $data ) ? $data : array() ), $accepted->get_error_code() );
 
 			return $accepted;
 		}
@@ -475,13 +480,12 @@ final class Creative_Manager {
 			);
 		}
 
-		$previous = $this->creatives->storage_details( $creative_id );
-
-		$this->creatives->record_upload( $creative_id, $accepted );
+		$accepted['expected_sha256'] = $previous['sha256'] ?? '';
+		$saved                       = $this->creatives->record_upload( $creative_id, $accepted );
 
 		$recorded = $this->creatives->storage_details( $creative_id );
 
-		if ( null === $recorded || $accepted['path'] !== $recorded['path'] ) {
+		if ( ! $saved || null === $recorded || $accepted['sha256'] !== $recorded['sha256'] ) {
 			$this->storage->delete( $accepted['path'] );
 
 			$this->audit->insert(
@@ -531,8 +535,8 @@ final class Creative_Manager {
 			'placement_id' => $placement_id,
 			'width'        => $accepted['width'],
 			'height'       => $accepted['height'],
-			'mime'         => $accepted['mime'],
-			'bytes'        => $accepted['bytes'],
+			'mime'         => Image_Handler::summary( $accepted )['mime'],
+			'bytes'        => Image_Handler::summary( $accepted )['bytes'],
 			'name'         => $accepted['name'],
 		);
 	}
@@ -605,7 +609,9 @@ final class Creative_Manager {
 			return true;
 		}
 
-		$this->creatives->set_click_url( $creative_id, $click_url );
+		if ( ! $this->creatives->set_click_url( $creative_id, $click_url ) ) {
+			return $this->error( 'aggr_artwork_not_saved', __( 'The new artwork could not be saved. Please try again.', 'aggressive-ads' ), 409 );
+		}
 
 		/*
 		 * The destination is recorded, the old one is not. What it used to be

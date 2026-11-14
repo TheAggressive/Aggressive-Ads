@@ -74,6 +74,13 @@ final class Creative_File_Controller implements Service {
 	private string $pending_path = '';
 
 	/**
+	 * Bounded authorized raster extracted from an encrypted set.
+	 *
+	 * @var string|null
+	 */
+	private ?string $pending_bytes = null;
+
+	/**
 	 * The preview document waiting to be emitted, if any.
 	 *
 	 * Held the way `$pending_path` is, and for the same reason: the response
@@ -177,7 +184,9 @@ final class Creative_File_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function preview( WP_REST_Request $request ): WP_REST_Response {
-		$creative_id = (int) $request->get_param( 'id' );
+		$this->pending_bytes = null;
+		$this->pending_path  = '';
+		$creative_id         = (int) $request->get_param( 'id' );
 
 		/*
 		 * The same one answer every failure gets below: not a creative, no
@@ -190,6 +199,24 @@ final class Creative_File_Controller implements Service {
 		 */
 		if ( ! current_user_can( 'read_aggr_creative', $creative_id ) ) {
 			return $this->document_response( 404, self::unavailable_body() );
+		}
+		$records = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+		if ( null !== $records->source( $creative_id ) ) {
+			$set  = ( new \Aggressive\Ads\Workflow\Image_Resources( $records, $this->storage ) )->read( $creative_id );
+			$size = (string) ( $request->get_param( 'size' ) ?? '' );
+			if ( null === $set || ( '' !== $size && ! isset( $set['manifest']['resources'][ $size ] ) ) ) {
+				return $this->document_response( 404, self::unavailable_body() );
+			}
+			$body = '<div>';
+			foreach ( $set['manifest']['resources'] as $key => $resource ) {
+				if ( '' !== $size && $size !== $key ) {
+					continue;
+				}
+				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Bounded authorized raster bytes; the preview retains its empty sandbox and restrictive CSP.
+				$source = 'data:' . $resource['mime'] . ';base64,' . base64_encode( $set['images'][ $key ] );
+				$body  .= sprintf( '<figure><figcaption>%s</figcaption><img src="%s" alt=""></figure>', esc_html( $key ), esc_url( $source, array( 'data' ) ) );
+			}
+			return $this->document_response( 200, $body . '</div>' );
 		}
 
 		/*
@@ -251,7 +278,7 @@ final class Creative_File_Controller implements Service {
 		$this->pending_document = sprintf(
 			'<!DOCTYPE html><html lang="%1$s"><head><meta charset="utf-8"><title>%2$s</title>'
 			. '<style>html,body{margin:0;height:100%%;display:flex;align-items:center;justify-content:center;background:#fff}'
-			. 'img{max-width:100%%;height:auto;display:block}'
+			. 'img{max-width:100%%;height:auto;display:block}body>div{align-self:flex-start;width:100%%}figure{margin:0;padding:0.5rem}figcaption{font:14px/1.4 system-ui,sans-serif}'
 			. 'p{margin:0;padding:1rem;font:14px/1.4 system-ui,sans-serif;color:#50575e;text-align:center}</style></head>'
 			. '<body>%3$s</body></html>',
 			esc_attr( str_replace( '_', '-', (string) get_locale() ) ),
@@ -314,15 +341,19 @@ final class Creative_File_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function handle( WP_REST_Request $request ) {
-		$creative_id = (int) $request->get_param( 'id' );
+		$this->pending_document = '';
+		$creative_id            = (int) $request->get_param( 'id' );
 
-		$prepared = $this->prepare( $creative_id );
+		$this->pending_bytes = null;
+		$this->pending_path  = '';
+		$prepared            = $this->prepare( $creative_id, (string) ( $request->get_param( 'size' ) ?? '' ) );
 
 		if ( is_wp_error( $prepared ) ) {
 			return $prepared;
 		}
 
-		$this->pending_path = $prepared['path'];
+		$this->pending_path  = $prepared['path'];
+		$this->pending_bytes = $prepared['content'] ?? null;
 
 		$response = new WP_REST_Response( null, 200 );
 
@@ -361,10 +392,11 @@ final class Creative_File_Controller implements Service {
 	 * Separated from the response so the decision — which is the part with
 	 * security consequences — is testable without emitting bytes.
 	 *
-	 * @param int $creative_id Creative post id.
-	 * @return array{path: string, mime: string, filename: string, bytes: int}|WP_Error Path is relative to the private root.
+	 * @param int    $creative_id Creative post id.
+	 * @param string $size Requested rendition, or empty for the base.
+	 * @return array{path: string, mime: string, filename: string, bytes: int,content?:string}|WP_Error Path is relative to the private root.
 	 */
-	public function prepare( int $creative_id ) {
+	public function prepare( int $creative_id, string $size = '' ) {
 		/*
 		 * One answer for every failure below: not a creative, no such id, not
 		 * yours, no file on disk. Distinguishing them is what builds the
@@ -378,6 +410,25 @@ final class Creative_File_Controller implements Service {
 
 		if ( ! current_user_can( 'read_aggr_creative', $creative_id ) ) {
 			return $denied;
+		}
+		$records = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+		if ( null !== $records->source( $creative_id ) ) {
+			$set = ( new \Aggressive\Ads\Workflow\Image_Resources( $records, $this->storage ) )->read( $creative_id );
+			if ( null === $set ) {
+				return $denied;
+			}
+			$size     = '' === $size ? $set['manifest']['base'] : $size;
+			$resource = $set['manifest']['resources'][ $size ] ?? null;
+			if ( ! is_array( $resource ) ) {
+				return $denied;
+			}
+			return array(
+				'path'     => '',
+				'content'  => $set['images'][ $size ],
+				'mime'     => $resource['mime'],
+				'filename' => $this->safe_filename( $resource['name'], $resource['mime'] ),
+				'bytes'    => $resource['bytes'],
+			);
 		}
 
 		$details = $this->creatives->storage_details( $creative_id );
@@ -421,6 +472,15 @@ final class Creative_File_Controller implements Service {
 	public function serve( bool $served, WP_HTTP_Response $result ): bool {
 		if ( $served ) {
 			return $served;
+		}
+		if ( null !== $this->pending_bytes ) {
+			$bytes               = $this->pending_bytes;
+			$this->pending_bytes = null;
+			if ( 200 !== $result->get_status() ) {
+				return $served;
+			}
+			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Authorized, hash-verified raster response with allowlisted MIME, nosniff and restrictive CSP.
+			return true;
 		}
 
 		if ( '' !== $this->pending_document ) {

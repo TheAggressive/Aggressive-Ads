@@ -61,6 +61,42 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		$this->assertNotFalse( has_action( 'wp_uninitialize_site', array( $lifecycle, 'uninitialize_site' ) ) );
 	}
 
+	/** Newly installed sites qualify their own schema, cursor and revision-publication claims. */
+	public function test_responsive_image_schema_progress_and_locks_are_site_scoped(): void {
+		$this->network_activate();
+		$first       = (int) self::factory()->blog->create();
+		$second      = (int) self::factory()->blog->create();
+		$records     = new \Aggressive\Ads\Repository\Image_Resource_Repository();
+		$rows        = new \Aggressive\Ads\Repository\Image_Projection_Repository();
+		$first_lock  = '';
+		$second_lock = '';
+		try {
+			switch_to_blog( $first );
+			$this->assertTrue( $rows->available() );
+			$this->assertTrue( $rows->progress( 42, false ) );
+			$first_lock = $records->claim( 777 );
+			$this->assertNotSame( '', $first_lock );
+			restore_current_blog();
+			switch_to_blog( $second );
+			$this->assertTrue( $rows->available() );
+			$this->assertSame( 0, $rows->state()['cursor'] );
+			$second_lock = $records->claim( 777 );
+			$this->assertNotSame( '', $second_lock );
+			$this->assertNotSame( $first_lock, $second_lock );
+			$this->assertNull( $records->source( 777 ) );
+		} finally {
+			if ( '' !== $second_lock ) {
+				$records->release( $second_lock );
+			}
+			if ( '' !== $first_lock ) {
+				$records->release( $first_lock );
+			}
+			while ( ms_is_switched() ) {
+				restore_current_blog();
+			}
+		}
+	}
+
 	/**
 	 * A new site does not inherit schema from a per-site install elsewhere.
 	 *

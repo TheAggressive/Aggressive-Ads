@@ -35,13 +35,15 @@ final class Revision_Policy {
 	 * @param Creative_Revision_Repository   $revisions   Revision chain persistence.
 	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
 	 * @param Line_Item_Repository           $line_items  Line-item persistence.
+	 * @param Image_Publication              $images Reviewed image artifact binding.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Creative_Assignment_Repository $assignments,
-		private readonly Line_Item_Repository $line_items
+		private readonly Line_Item_Repository $line_items,
+		private readonly Image_Publication $images
 	) {
 	}
 
@@ -53,7 +55,7 @@ final class Revision_Policy {
 	 * @return bool
 	 */
 	public function is_frozen( int $creative_id ): bool {
-		return $creative_id > 0 && $this->attachments->has_attachment( $creative_id );
+		return $creative_id > 0 && ( $this->attachments->has_attachment( $creative_id ) || ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->has_publication( $creative_id ) );
 	}
 
 	/**
@@ -89,14 +91,22 @@ final class Revision_Policy {
 
 		if ( ! $this->is_frozen( $creative_id ) ) {
 			// Never approved, so there is nothing to preserve.
-			$this->creatives->set_text( $creative_id, $next_url, $next_alt );
-
-			return $creative_id;
+			return $this->creatives->set_text( $creative_id, $next_url, $next_alt ) ? $creative_id : 0;
 		}
 
-		$revision_id = $this->revisions->create_text_revision( $creative_id, $next_url, $next_alt );
+		$source = ( new \Aggressive\Ads\Repository\Image_Resource_Repository() )->source( $creative_id );
+		if ( false === $source ) {
+			return 0;
+		}
+		$revision_id = null === $source
+			? $this->revisions->create_text_revision( $creative_id, $next_url, $next_alt )
+			: $this->revisions->create_pending_text_revision( $creative_id, $next_url, $next_alt );
 
 		if ( $revision_id <= 0 ) {
+			return 0;
+		}
+		if ( null !== $source && ( is_wp_error( $this->images->promote( $revision_id ) ) || ! $this->revisions->activate_replacement( $creative_id, $revision_id, $this->creatives->provider_ad_id( $creative_id ) ) ) ) {
+			$this->creatives->delete( $revision_id );
 			return 0;
 		}
 

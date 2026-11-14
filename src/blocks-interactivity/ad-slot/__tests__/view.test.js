@@ -23,6 +23,40 @@ describe( 'ad slot fill', () => {
 		imagesPaint( true );
 	} );
 
+	it.each( [
+		{ format: 'html5', formatVersion: 1 },
+		{ format: 'image', formatVersion: 2 },
+		{ format: 'image' },
+		{ formatVersion: 1 },
+	] )(
+		'refuses unsupported descriptors without painting or beaconing: %o',
+		async ( descriptor ) => {
+			document.body.innerHTML =
+				'<div data-aggr-fill="/fill"><span>Current ad</span></div>';
+			const root = document.querySelector( '[data-aggr-fill]' );
+			window.navigator.sendBeacon = jest.fn();
+			window.fetch = jest.fn().mockResolvedValue( {
+				ok: true,
+				json: async () => ( {
+					creative: {
+						...descriptor,
+						image: '/unreviewed.png',
+						click: '/click',
+						token: 'test-token',
+					},
+					beacon: '/beacon',
+				} ),
+			} );
+			expect( await fillSlot( root ) ).toEqual( {
+				rendered: false,
+				servable: 0,
+			} );
+			expect( root.textContent ).toBe( 'Current ad' );
+			expect( root.querySelector( 'img' ) ).toBeNull();
+			expect( window.navigator.sendBeacon ).not.toHaveBeenCalled();
+		}
+	);
+
 	afterEach( () => {
 		delete window.HTMLImageElement.prototype.decode;
 		document.body.replaceChildren();
